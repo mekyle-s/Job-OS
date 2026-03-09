@@ -1,4 +1,5 @@
 import nextPlugin from 'eslint-config-next';
+import tsParser from '@typescript-eslint/parser';
 
 const eslintConfig = [
   {
@@ -9,6 +10,7 @@ const eslintConfig = [
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
+      parser: tsParser,
       parserOptions: {
         ecmaFeatures: {
           jsx: true,
