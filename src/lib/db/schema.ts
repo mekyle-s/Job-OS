@@ -1,6 +1,7 @@
 import { pgTable, text, timestamp, boolean, index } from 'drizzle-orm/pg-core';
 
-export const users = pgTable('users', {
+// Better Auth expects singular names: user, session, account, verification
+export const user = pgTable('users', {
   id: text('id').primaryKey(),
   email: text('email').notNull().unique(),
   emailVerified: boolean('email_verified').default(false).notNull(),
@@ -10,7 +11,7 @@ export const users = pgTable('users', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const sessions = pgTable(
+export const session = pgTable(
   'sessions',
   {
     id: text('id').primaryKey(),
@@ -22,12 +23,12 @@ export const sessions = pgTable(
     userAgent: text('user_agent'),
     userId: text('user_id')
       .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
+      .references(() => user.id, { onDelete: 'cascade' }),
   },
   (table) => [index('sessions_user_id_idx').on(table.userId)]
 );
 
-export const accounts = pgTable(
+export const account = pgTable(
   'accounts',
   {
     id: text('id').primaryKey(),
@@ -35,7 +36,7 @@ export const accounts = pgTable(
     providerId: text('provider_id').notNull(),
     userId: text('user_id')
       .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
+      .references(() => user.id, { onDelete: 'cascade' }),
     accessToken: text('access_token'),
     refreshToken: text('refresh_token'),
     idToken: text('id_token'),
@@ -49,7 +50,7 @@ export const accounts = pgTable(
   (table) => [index('accounts_user_id_idx').on(table.userId)]
 );
 
-export const verifications = pgTable(
+export const verification = pgTable(
   'verifications',
   {
     id: text('id').primaryKey(),
