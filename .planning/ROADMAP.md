@@ -30,10 +30,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Database schema is deployed and migrations run successfully
   3. Background job queue processes test jobs
   4. Application deploys to staging environment
-**Plans**: TBD
+**Plans**: 2 plans in 2 waves
 
 Plans:
-- [ ] 01-01: [TBD during planning]
+- [ ] 01-01-PLAN.md — Project scaffolding, Docker Compose PostgreSQL, Drizzle ORM + schema + migrations
+- [ ] 01-02-PLAN.md — pg-boss job queue with test worker, health check endpoint, build verification
 
 ### Phase 2: Authentication
 **Goal**: Users can securely create accounts and manage sessions
@@ -117,7 +118,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation Setup | 0/? | Not started | - |
+| 1. Foundation Setup | 0/2 | Planned | - |
 | 2. Authentication | 0/? | Not started | - |
 | 3. Evidence Foundation | 0/? | Not started | - |
 | 4. Job Data Pipeline | 0/? | Not started | - |
