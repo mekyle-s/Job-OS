@@ -17,15 +17,25 @@ export function SignUpForm() {
     setLoading(true);
 
     try {
-      await authClient.signUp.email({
+      const result = await authClient.signUp.email({
         email,
         password,
         name,
       });
 
+      console.log('Sign-up result:', result);
+
+      // Check if sign-up was successful
+      if (result.error) {
+        setError(result.error.message || 'Failed to create account. Please try again.');
+        setLoading(false);
+        return;
+      }
+
       // Redirect to dashboard on success
       window.location.href = '/dashboard';
     } catch (err) {
+      console.error('Sign-up error:', err);
       setError('Failed to create account. Please try again.');
       setLoading(false);
     }

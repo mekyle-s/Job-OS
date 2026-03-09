@@ -16,14 +16,24 @@ export function SignInForm() {
     setLoading(true);
 
     try {
-      await authClient.signIn.email({
+      const result = await authClient.signIn.email({
         email,
         password,
       });
 
+      console.log('Sign-in result:', result);
+
+      // Check if sign-in was successful
+      if (result.error) {
+        setError(result.error.message || 'Invalid credentials. Please try again.');
+        setLoading(false);
+        return;
+      }
+
       // Redirect to dashboard on success
       window.location.href = '/dashboard';
     } catch (err) {
+      console.error('Sign-in error:', err);
       setError('Invalid credentials. Please try again.');
       setLoading(false);
     }
