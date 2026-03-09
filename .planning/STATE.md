@@ -9,31 +9,32 @@ See: .planning/PROJECT.md (updated 2026-03-08)
 
 ## Current Position
 
-Phase: 1 of 6 (Foundation Setup) — ✓ VERIFIED & COMPLETE
-Plan: 2 of 2 in current phase
-Status: Phase verified, ready for Phase 2
-Last activity: 2026-03-09 — Phase 1 verified: All success criteria met
+Phase: 2 of 6 (Authentication) — IN PROGRESS
+Plan: 1 of 2 in current phase
+Status: Plan 02-01 complete, ready for Plan 02-02
+Last activity: 2026-03-09 — Completed 02-01-PLAN.md (Better Auth Backend)
 
-Progress: [██████████] 100% (Phase 1 complete)
+Progress: [██████████░░░░░░░░] 50% (Phase 2: 1 of 2 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 2
-- Average duration: 6.5 minutes
-- Total execution time: 0.22 hours
+- Total plans completed: 3
+- Average duration: 15.7 minutes
+- Total execution time: 0.78 hours
 
 **By Phase:**
 
 | Phase               | Plans | Total  | Avg/Plan |
 | ------------------- | ----- | ------ | -------- |
 | 01-foundation-setup | 2     | 13 min | 6.5 min  |
+| 02-authentication   | 1     | 28 min | 28 min   |
 
 **Recent Trend:**
 
-- Last 5 plans: 01-01 (7 min), 01-02 (6 min)
-- Trend: Phase 1 complete
+- Last 5 plans: 01-01 (7 min), 01-02 (6 min), 02-01 (28 min)
+- Trend: Phase 2 in progress (1 of 2 complete)
 
 _Updated after each plan completion_
 
@@ -63,6 +64,13 @@ Recent decisions affecting current work:
 - DEV-006: Separate pgboss schema for job queue tables (isolates pg-boss from application tables)
 - DEV-007: Add TypeScript parser to ESLint config (fixes parsing errors for TypeScript files)
 
+**From 02-01 (Better Auth Backend):**
+
+- DEV-008: Use text IDs instead of UUIDs for Better Auth compatibility (Better Auth generates its own text-based IDs internally)
+- DEV-009: Disable email verification for V1 to allow immediate login after sign-up (can enable later for production)
+- DEV-010: Use Resend's onboarding@resend.dev sandbox domain as default EMAIL_FROM (works without domain verification, user can update later)
+- DEV-011: Implement DAL pattern for session verification via requireUser/verifySession helpers (separate from middleware for proper authorization)
+
 ### Pending Todos
 
 None yet.
@@ -79,6 +87,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-09 (Phase 1 execution & verification)
-Stopped at: Phase 1 verified complete, ready for Phase 2 planning
-Resume file: .planning/phases/01-foundation-setup/01-VERIFICATION.md
+Last session: 2026-03-09 (Phase 2 Plan 02-01 execution & completion)
+Stopped at: Plan 02-01 complete, ready for Plan 02-02 (Auth UI Pages)
+Resume file: .planning/phases/02-authentication/02-01-SUMMARY.md
