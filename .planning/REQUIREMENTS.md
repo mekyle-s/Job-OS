@@ -110,34 +110,34 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CORE-01 | TBD | Pending |
-| CORE-02 | TBD | Pending |
-| CORE-03 | TBD | Pending |
-| CORE-04 | TBD | Pending |
-| CORE-05 | TBD | Pending |
-| CORE-06 | TBD | Pending |
-| CORE-07 | TBD | Pending |
-| CORE-08 | TBD | Pending |
-| CORE-09 | TBD | Pending |
-| CORE-10 | TBD | Pending |
-| CORE-11 | TBD | Pending |
-| CORE-12 | TBD | Pending |
-| SUPP-01 | TBD | Pending |
-| SUPP-02 | TBD | Pending |
-| SUPP-03 | TBD | Pending |
-| SUPP-04 | TBD | Pending |
-| SUPP-05 | TBD | Pending |
-| SUPP-06 | TBD | Pending |
-| SUPP-07 | TBD | Pending |
-| SUPP-08 | TBD | Pending |
-| SUPP-09 | TBD | Pending |
-| SUPP-10 | TBD | Pending |
+| CORE-01 | Phase 3 | Pending |
+| CORE-02 | Phase 3 | Pending |
+| CORE-03 | Phase 3 | Pending |
+| CORE-04 | Phase 3 | Pending |
+| CORE-05 | Phase 4 | Pending |
+| CORE-06 | Phase 5 | Pending |
+| CORE-07 | Phase 5 | Pending |
+| CORE-08 | Phase 5 | Pending |
+| CORE-09 | Phase 5 | Pending |
+| CORE-10 | Phase 5 | Pending |
+| CORE-11 | Phase 5 | Pending |
+| CORE-12 | Phase 5 | Pending |
+| SUPP-01 | Phase 2 | Pending |
+| SUPP-02 | Phase 2 | Pending |
+| SUPP-03 | Phase 2 | Pending |
+| SUPP-04 | Phase 4 | Pending |
+| SUPP-05 | Phase 4 | Pending |
+| SUPP-06 | Phase 4 | Pending |
+| SUPP-07 | Phase 6 | Pending |
+| SUPP-08 | Phase 6 | Pending |
+| SUPP-09 | Phase 6 | Pending |
+| SUPP-10 | Phase 6 | Pending |
 
 **Coverage:**
 - v1 requirements: 22 total (12 CORE + 10 SUPPORT)
-- Mapped to phases: 0 (pending roadmap creation)
-- Unmapped: 22 ⚠️
+- Mapped to phases: 22/22 (100% coverage)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-08 after initial definition*
+*Last updated: 2026-03-08 after roadmap creation*
