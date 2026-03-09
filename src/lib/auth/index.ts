@@ -7,6 +7,8 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: 'pg',
   }),
+  secret: process.env.BETTER_AUTH_SECRET,
+  baseURL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 8,
