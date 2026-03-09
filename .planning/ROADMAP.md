@@ -51,11 +51,12 @@ Plans:
 2. User can log in and session persists across browser refresh
 3. User can log out from any page
 4. User can reset forgotten password via email link
-   **Plans**: TBD
+   **Plans**: 2 plans in 2 waves
 
 Plans:
 
-- [ ] 02-01: [TBD during planning]
+- [ ] 02-01-PLAN.md — Better Auth backend: schema migration, server/client config, Resend email, API route
+- [ ] 02-02-PLAN.md — Auth UI: sign-up/sign-in/sign-out pages, password reset, middleware, protected dashboard
 
 ### Phase 3: Evidence Foundation
 
