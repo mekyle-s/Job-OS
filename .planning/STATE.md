@@ -9,20 +9,20 @@ See: .planning/PROJECT.md (updated 2026-03-08)
 
 ## Current Position
 
-Phase: 3 of 6 (Evidence Foundation) — IN PROGRESS
-Plan: 3 of 4 in current phase
-Status: Evidence management UI complete - list, cards, forms, CRUD operations, manual entry, and dashboard integration ready
-Last activity: 2026-03-12 — Completed 03-03-PLAN.md (Evidence Management UI)
+Phase: 3 of 6 (Evidence Foundation) — COMPLETE ✓
+Plan: All 4 plans complete
+Status: Evidence foundation complete - resume upload with AI parsing, evidence management UI, and end-to-end flow verified
+Last activity: 2026-03-12 — Completed Phase 3 (all 4 plans + verification)
 
-Progress: [████████████████░░░░] 87.5% (Overall: 7 of 8 plans complete)
+Progress: [████████████████████] 100% (Overall: 8 of 8 plans complete in Phases 1-3)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 7
-- Average duration: 30.9 minutes
-- Total execution time: 3.60 hours (216 minutes)
+- Total plans completed: 8
+- Average duration: 46.9 minutes
+- Total execution time: 6.25 hours (375 minutes)
 
 **By Phase:**
 
@@ -30,12 +30,12 @@ Progress: [████████████████░░░░] 87.5% (
 | ---------------------- | ----- | ------- | -------- |
 | 01-foundation-setup    | 2     | 13 min  | 6.5 min  |
 | 02-authentication      | 2     | 187 min | 93.5 min |
-| 03-evidence-foundation | 3     | 12 min  | 4 min    |
+| 03-evidence-foundation | 4     | 147 min | 36.8 min |
 
 **Recent Trend:**
 
-- Last 5 plans: 02-02 (159 min), 03-01 (3 min), 03-02 (4 min), 03-03 (5 min)
-- Trend: Phase 3 maintaining exceptional velocity - evidence management UI complete in 5 minutes (forms, pages, CRUD)
+- Last 5 plans: 03-01 (3 min), 03-02 (4 min), 03-03 (5 min), 03-04 (135 min checkpoint w/ extensive debugging)
+- Trend: Phase 3 complete - checkpoint plan took longer due to PDF library issues, OpenAI quota debugging, and Tailwind v4 configuration fixes
 
 _Updated after each plan completion_
 
@@ -89,6 +89,13 @@ Recent decisions affecting current work:
 
 - DEV-016: Evidence UI components created early in 03-02 to support resume parsing testing - 03-03 focused on dashboard integration and form pages rather than creating all UI components from scratch. Evidence list, cards, and actions were already functional from prior plan.
 
+**From 03-04 (Upload UI Integration):**
+
+- DEV-017: Use pdf2json instead of pdf-parse for server-side PDF extraction - pdf-parse v2 requires browser workers (incompatible with Next.js server), v1 has build-time test file issues. pdf2json is purpose-built for Node.js server environments with event-based API and no worker dependencies.
+- DEV-018: OpenAI Structured Outputs requires .nullable() not .optional() - All optional fields in Resume Evidence schemas must use .nullable() instead of .optional() per OpenAI API requirements. Fields can be omitted entirely (undefined) or explicitly null, but .optional() is not supported.
+- DEV-019: Tailwind CSS v4 uses @import syntax not @tailwind directives - v4 requires `@import "tailwindcss";` and `@source "../**/*.{js,ts,jsx,tsx}";` in globals.css instead of `@tailwind base/components/utilities`. Config file (tailwind.config.ts) is no longer used for content paths.
+- DEV-020: Convert nullable to undefined when passing to TypeScript interfaces - Database query functions expect `string | undefined` for optional fields, but OpenAI schemas use `string | null`. Use `field ?? undefined` pattern to convert null to undefined when creating database records.
+
 ### Pending Todos
 
 None yet.
@@ -108,6 +115,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-12 (Phase 3 Plan 03-03 execution & completion)
-Stopped at: Phase 3 Plan 3 complete - evidence management UI (list, cards, forms, CRUD, manual entry) ready
-Resume file: .planning/phases/03-evidence-foundation/03-03-SUMMARY.md
+Last session: 2026-03-12 (Phase 3 execution - all 4 plans complete + verification)
+Stopped at: Phase 3 complete - evidence foundation fully functional (upload, parsing, management, E2E verified)
+Resume file: .planning/phases/03-evidence-foundation/03-VERIFICATION.md
