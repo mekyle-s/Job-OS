@@ -15,6 +15,13 @@
       "when": 1773046430941,
       "tag": "0001_hesitant_captain_stacy",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1773327634313,
+      "tag": "0002_material_mister_fear",
+      "breakpoints": true
     }
   ]
 }
