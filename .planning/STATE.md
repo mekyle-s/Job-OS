@@ -10,19 +10,19 @@ See: .planning/PROJECT.md (updated 2026-03-08)
 ## Current Position
 
 Phase: 3 of 6 (Evidence Foundation) — IN PROGRESS
-Plan: 1 of 4 in current phase
-Status: Evidence data layer complete - database schema, validation, and CRUD queries ready
-Last activity: 2026-03-12 — Completed 03-01-PLAN.md (Evidence Data Layer)
+Plan: 2 of 4 in current phase
+Status: Resume upload and parsing pipeline complete - file extraction, LLM parsing, background jobs, and APIs ready
+Last activity: 2026-03-12 — Completed 03-02-PLAN.md (Resume Upload & Parsing)
 
-Progress: [████████████░░░░░░░░] 62.5% (Overall: 5 of 8 plans complete)
+Progress: [██████████████░░░░░░] 75% (Overall: 6 of 8 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 5
-- Average duration: 42.4 minutes
-- Total execution time: 3.53 hours
+- Total plans completed: 6
+- Average duration: 35.2 minutes
+- Total execution time: 3.57 hours (211 minutes)
 
 **By Phase:**
 
@@ -30,12 +30,12 @@ Progress: [████████████░░░░░░░░] 62.5% (
 | ---------------------- | ----- | ------- | -------- |
 | 01-foundation-setup    | 2     | 13 min  | 6.5 min  |
 | 02-authentication      | 2     | 187 min | 93.5 min |
-| 03-evidence-foundation | 1     | 3 min   | 3 min    |
+| 03-evidence-foundation | 2     | 7 min   | 3.5 min  |
 
 **Recent Trend:**
 
-- Last 5 plans: 01-02 (6 min), 02-01 (28 min), 02-02 (159 min), 03-01 (3 min)
-- Trend: Phase 3 started - evidence foundation data layer complete in 3 minutes (schema and CRUD queries)
+- Last 5 plans: 02-01 (28 min), 02-02 (159 min), 03-01 (3 min), 03-02 (4 min)
+- Trend: Phase 3 maintaining high velocity - resume parsing pipeline complete in 4 minutes (parsers, worker, APIs)
 
 _Updated after each plan completion_
 
@@ -80,6 +80,11 @@ Recent decisions affecting current work:
 
 - DEV-013: Defer vector/embedding columns to Phase 5 - Evidence tables don't need embedding columns until semantic search is implemented. Phase 5 will add embedding columns via migration when actually needed for proof graph search.
 
+**From 03-02 (Resume Upload & Parsing):**
+
+- DEV-014: Lazy-initialize OpenAI client at runtime - Direct instantiation (`const client = new OpenAI()`) causes Next.js build failures when OPENAI_API_KEY env var is missing. Using lazy initialization pattern (getOpenAIClient() function) defers client creation to first use, allowing builds to succeed without API key present.
+- DEV-015: pg-boss workers accept Job<T>[] array signature - pg-boss work() handlers receive array of jobs, not single job objects. Workers must extract first job with `jobs[0]` pattern for processing.
+
 ### Pending Todos
 
 None yet.
@@ -99,6 +104,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-12 (Phase 3 Plan 03-01 execution & completion)
-Stopped at: Phase 3 Plan 1 complete - evidence data layer (schema, validation, CRUD) ready
-Resume file: .planning/phases/03-evidence-foundation/03-01-SUMMARY.md
+Last session: 2026-03-12 (Phase 3 Plan 03-02 execution & completion)
+Stopped at: Phase 3 Plan 2 complete - resume upload and parsing pipeline (extractors, LLM parser, worker, APIs) ready
+Resume file: .planning/phases/03-evidence-foundation/03-02-SUMMARY.md
