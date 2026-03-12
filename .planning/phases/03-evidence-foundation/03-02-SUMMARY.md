@@ -45,7 +45,7 @@ metrics:
 
 # Phase 03 Plan 02: Resume Upload and Parsing Pipeline Summary
 
-**One-liner:** JWT auth with refresh rotation using jose library
+**One-liner:** PDF/DOCX text extraction + OpenAI GPT-4o Structured Outputs parsing + pg-boss background jobs with upload/status APIs
 
 ## What Was Built
 
