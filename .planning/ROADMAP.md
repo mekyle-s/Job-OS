@@ -70,11 +70,14 @@ Plans:
 3. User can add evidence sources (GitHub repos, portfolio links, manual projects)
 4. User can edit or delete parsed evidence items
 5. Evidence items show source excerpts and extraction confidence
-   **Plans**: TBD
+   **Plans**: 4 plans in 3 waves
 
 Plans:
 
-- [ ] 03-01: [TBD during planning]
+- [ ] 03-01-PLAN.md — Evidence database schema, Zod validation schemas, and CRUD query functions
+- [ ] 03-02-PLAN.md — Resume text extraction (PDF/DOCX), OpenAI LLM parsing, pg-boss worker, upload/status API routes
+- [ ] 03-03-PLAN.md — Evidence management UI: list, manual add, edit, delete with confidence badges
+- [ ] 03-04-PLAN.md — Upload UI with drag-and-drop, parse status polling, end-to-end verification
 
 ### Phase 4: Job Data Pipeline
 
@@ -140,7 +143,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | --------------------------- | -------------- | ----------- | ---------- |
 | 1. Foundation Setup         | 2/2            | ✓ Complete  | 2026-03-09 |
 | 2. Authentication           | 2/2            | ✓ Complete  | 2026-03-09 |
-| 3. Evidence Foundation      | 0/?            | Not started | -          |
+| 3. Evidence Foundation      | 0/4            | Not started | -          |
 | 4. Job Data Pipeline        | 0/?            | Not started | -          |
 | 5. Matching Core            | 0/?            | Not started | -          |
 | 6. Tracking & Notifications | 0/?            | Not started | -          |
