@@ -9,32 +9,33 @@ See: .planning/PROJECT.md (updated 2026-03-08)
 
 ## Current Position
 
-Phase: 2 of 6 (Authentication) — COMPLETE
-Plan: 2 of 2 in current phase
-Status: Phase 2 complete - all authentication flows verified and working
-Last activity: 2026-03-09 — Completed 02-02-PLAN.md (Auth UI Pages)
+Phase: 3 of 6 (Evidence Foundation) — IN PROGRESS
+Plan: 1 of 4 in current phase
+Status: Evidence data layer complete - database schema, validation, and CRUD queries ready
+Last activity: 2026-03-12 — Completed 03-01-PLAN.md (Evidence Data Layer)
 
-Progress: [████████████████████] 100% (Phase 2: 2 of 2 plans complete)
+Progress: [████████████░░░░░░░░] 62.5% (Overall: 5 of 8 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 4
-- Average duration: 58.5 minutes
-- Total execution time: 3.9 hours
+- Total plans completed: 5
+- Average duration: 42.4 minutes
+- Total execution time: 3.53 hours
 
 **By Phase:**
 
-| Phase               | Plans | Total   | Avg/Plan |
-| ------------------- | ----- | ------- | -------- |
-| 01-foundation-setup | 2     | 13 min  | 6.5 min  |
-| 02-authentication   | 2     | 187 min | 93.5 min |
+| Phase                  | Plans | Total   | Avg/Plan |
+| ---------------------- | ----- | ------- | -------- |
+| 01-foundation-setup    | 2     | 13 min  | 6.5 min  |
+| 02-authentication      | 2     | 187 min | 93.5 min |
+| 03-evidence-foundation | 1     | 3 min   | 3 min    |
 
 **Recent Trend:**
 
-- Last 5 plans: 01-01 (7 min), 01-02 (6 min), 02-01 (28 min), 02-02 (159 min)
-- Trend: Phase 2 complete (authentication fully functional and verified)
+- Last 5 plans: 01-02 (6 min), 02-01 (28 min), 02-02 (159 min), 03-01 (3 min)
+- Trend: Phase 3 started - evidence foundation data layer complete in 3 minutes (schema and CRUD queries)
 
 _Updated after each plan completion_
 
@@ -75,6 +76,10 @@ Recent decisions affecting current work:
 
 - DEV-012: Use singular table names for Better Auth schema (user, session, account, verification instead of plural). Better Auth's internal queries expect singular table names. This is a framework convention that must be followed for compatibility.
 
+**From 03-01 (Evidence Data Layer):**
+
+- DEV-013: Defer vector/embedding columns to Phase 5 - Evidence tables don't need embedding columns until semantic search is implemented. Phase 5 will add embedding columns via migration when actually needed for proof graph search.
+
 ### Pending Todos
 
 None yet.
@@ -83,7 +88,10 @@ None yet.
 
 **Phase 1:** Need to validate Docling integration (newer tool with limited production case studies) during planning. Fallback: pdf-parse for basic extraction, manual entry for complex cases.
 
-**Phase 3:** Embedding dimension optimization needed - pgvector supports up to 2000 dimensions efficiently but OpenAI text-embedding-3-large produces 3072. May need dimension reduction or different embedding model.
+**Phase 3:**
+
+- BLOCKER: User must add OPENAI_API_KEY to .env.local before resume parsing will work in Plan 03-02. Get API key from https://platform.openai.com/api-keys
+- Embedding dimension optimization needed - pgvector supports up to 2000 dimensions efficiently but OpenAI text-embedding-3-large produces 3072. May need dimension reduction or different embedding model (deferred to Phase 5).
 
 **Phase 4:** Job board API access validation needed - Indeed and LinkedIn have strict requirements. May need to start with smaller boards or user-submitted URLs in V1.
 
@@ -91,6 +99,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-09 (Phase 2 Plan 02-02 execution & completion)
-Stopped at: Phase 2 complete - authentication fully functional and verified
-Resume file: .planning/phases/02-authentication/02-02-SUMMARY.md
+Last session: 2026-03-12 (Phase 3 Plan 03-01 execution & completion)
+Stopped at: Phase 3 Plan 1 complete - evidence data layer (schema, validation, CRUD) ready
+Resume file: .planning/phases/03-evidence-foundation/03-01-SUMMARY.md
