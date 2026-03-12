@@ -20,12 +20,14 @@ export function ConfidenceBadge({ confidence, className = '' }: ConfidenceBadgeP
 
   return (
     <div
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${colorClasses} ${className}`}
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-semibold ${colorClasses} ${className}`}
       aria-label={`Confidence: ${percentage}%`}
       title={`Confidence: ${percentage}%`}
     >
-      <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-      {percentage}%
+      <span className="w-2 h-2 rounded-full bg-current"></span>
+      <span>{label}</span>
+      <span className="opacity-75">•</span>
+      <span>{percentage}%</span>
     </div>
   );
 }

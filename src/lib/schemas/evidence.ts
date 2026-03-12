@@ -14,8 +14,8 @@ export const ExperienceSchema = z.object({
   endDate: z.string().nullable().describe('End date in YYYY-MM format, null if current'),
   location: z
     .string()
-    .optional()
-    .describe('Location of the job (e.g., "San Francisco, CA" or "Remote")'),
+    .nullable()
+    .describe('Location of the job (e.g., "San Francisco, CA" or "Remote"), null if not specified'),
   achievements: z
     .array(z.string())
     .describe('List of achievements, responsibilities, or accomplishments'),
@@ -34,7 +34,10 @@ export const ProjectSchema = z.object({
   name: z.string().describe('Project name or title'),
   description: z.string().describe('Project description or summary'),
   technologies: z.array(z.string()).describe('Technologies, frameworks, or tools used'),
-  url: z.string().optional().describe('Project URL, GitHub link, or demo link'),
+  url: z
+    .string()
+    .nullable()
+    .describe('Project URL, GitHub link, or demo link, null if not available'),
   achievements: z.array(z.string()).describe('Key achievements, outcomes, or highlights'),
   confidence: z
     .number()
@@ -53,8 +56,8 @@ export const EducationSchema = z.object({
     .string()
     .nullable()
     .describe('Graduation date in YYYY-MM format, null if in progress'),
-  location: z.string().optional().describe('Location of the institution'),
-  gpa: z.string().optional().describe('GPA or academic honors'),
+  location: z.string().nullable().describe('Location of the institution, null if not specified'),
+  gpa: z.string().nullable().describe('GPA or academic honors, null if not specified'),
 });
 
 /**

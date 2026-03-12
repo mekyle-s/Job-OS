@@ -64,7 +64,7 @@ export async function resumeParserHandler(jobs: Job<ResumeParsePayload>[]) {
         metadata: {
           skills: exp.skills,
           achievements: exp.achievements,
-          location: exp.location,
+          location: exp.location ?? undefined,
         },
         confidence: exp.confidence,
         isManual: false,
@@ -97,8 +97,8 @@ export async function resumeParserHandler(jobs: Job<ResumeParsePayload>[]) {
         company: edu.institution,
         endDate: edu.graduationDate ?? undefined,
         metadata: {
-          location: edu.location,
-          gpa: edu.gpa,
+          location: edu.location ?? undefined,
+          gpa: edu.gpa ?? undefined,
         },
         confidence: 0.95, // Education is typically high confidence
         isManual: false,

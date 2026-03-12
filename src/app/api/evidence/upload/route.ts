@@ -9,7 +9,10 @@ import { join } from 'path';
 import { randomUUID } from 'crypto';
 
 const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
-const ALLOWED_MIME_TYPES = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+const ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+];
 
 export async function POST(request: NextRequest) {
   // 1. Authenticate user
@@ -38,10 +41,7 @@ export async function POST(request: NextRequest) {
 
     // 4. Validate file size
     if (file.size > MAX_FILE_SIZE) {
-      return Response.json(
-        { error: 'File too large. Maximum size is 4MB.' },
-        { status: 400 }
-      );
+      return Response.json({ error: 'File too large. Maximum size is 4MB.' }, { status: 400 });
     }
 
     // 5. Save file to local uploads/ directory
@@ -67,6 +67,9 @@ export async function POST(request: NextRequest) {
 
     // 7. Start pg-boss queue, register worker, and send job
     const boss = await startJobQueue();
+
+    // Create queue (idempotent - safe to call multiple times)
+    await boss.createQueue(RESUME_PARSE_QUEUE);
 
     // Register worker (idempotent - safe to call multiple times)
     await boss.work(RESUME_PARSE_QUEUE, resumeParserHandler);
