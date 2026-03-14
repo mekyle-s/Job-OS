@@ -89,12 +89,16 @@ Plans:
 1. User can define target criteria (function, location, visa status, companies)
 2. System fetches roles from supported sources matching user criteria
 3. User can view job listings with title, company, location, and freshness indicator
-4. Job postings display extracted requirements with confidence scores
-   **Plans**: TBD
+4. Job postings display extracted requirements with review states
+   **Plans**: 5 plans in 5 waves
 
 Plans:
 
-- [ ] 04-01: [TBD during planning]
+- [ ] 04-01-PLAN.md -- Database schema, Zod validation, and CRUD queries for jobs, requirements, and user criteria
+- [ ] 04-02-PLAN.md -- Source adapter interface, Greenhouse adapter, and conservative LLM requirement extractor
+- [ ] 04-03-PLAN.md -- pg-boss workers for job polling and requirement extraction, Vercel Cron endpoint
+- [ ] 04-04-PLAN.md -- REST API routes for criteria, jobs, and requirement management
+- [ ] 04-05-PLAN.md -- UI pages for criteria setup, job listings, and job detail with requirement editing
 
 ### Phase 5: Matching Core
 
