@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "better-auth": "^1.5.4",
+    "date-fns": "^4.1.0",
     "dotenv": "^17.3.1",
     "drizzle-orm": "^0.45.1",
     "mammoth": "^1.11.0",
