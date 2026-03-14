@@ -9,20 +9,20 @@ See: .planning/PROJECT.md (updated 2026-03-08)
 
 ## Current Position
 
-Phase: 3 of 6 (Evidence Foundation) — COMPLETE ✓
-Plan: All 4 plans complete
-Status: Evidence foundation complete - resume upload with AI parsing, evidence management UI, and end-to-end flow verified
-Last activity: 2026-03-12 — Completed Phase 3 (all 4 plans + verification)
+Phase: 4 of 6 (Job Data Pipeline) — IN PROGRESS
+Plan: 1 of 5 complete
+Status: Job data schema foundation complete - 5 tables created with Zod schemas and CRUD functions
+Last activity: 2026-03-14 — Completed 04-01-PLAN.md (Job Data Schema)
 
-Progress: [████████████████████] 100% (Overall: 8 of 8 plans complete in Phases 1-3)
+Progress: [█████████████████░░░] 90% (Overall: 9 of 9 plans complete in Phases 1-4)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 8
-- Average duration: 46.9 minutes
-- Total execution time: 6.25 hours (375 minutes)
+- Total plans completed: 9
+- Average duration: 42.1 minutes
+- Total execution time: 6.32 hours (379 minutes)
 
 **By Phase:**
 
@@ -31,11 +31,12 @@ Progress: [████████████████████] 100% (O
 | 01-foundation-setup    | 2     | 13 min  | 6.5 min  |
 | 02-authentication      | 2     | 187 min | 93.5 min |
 | 03-evidence-foundation | 4     | 147 min | 36.8 min |
+| 04-job-data-pipeline   | 1     | 4 min   | 4 min    |
 
 **Recent Trend:**
 
-- Last 5 plans: 03-01 (3 min), 03-02 (4 min), 03-03 (5 min), 03-04 (135 min checkpoint w/ extensive debugging)
-- Trend: Phase 3 complete - checkpoint plan took longer due to PDF library issues, OpenAI quota debugging, and Tailwind v4 configuration fixes
+- Last 5 plans: 03-02 (4 min), 03-03 (5 min), 03-04 (135 min checkpoint w/ debugging), 04-01 (4 min)
+- Trend: Phase 4 started strong - clean schema/CRUD plan executed quickly with minimal deviations
 
 _Updated after each plan completion_
 
@@ -96,6 +97,11 @@ Recent decisions affecting current work:
 - DEV-019: Tailwind CSS v4 uses @import syntax not @tailwind directives - v4 requires `@import "tailwindcss";` and `@source "../**/*.{js,ts,jsx,tsx}";` in globals.css instead of `@tailwind base/components/utilities`. Config file (tailwind.config.ts) is no longer used for content paths.
 - DEV-020: Convert nullable to undefined when passing to TypeScript interfaces - Database query functions expect `string | undefined` for optional fields, but OpenAI schemas use `string | null`. Use `field ?? undefined` pattern to convert null to undefined when creating database records.
 
+**From 04-01 (Job Data Schema):**
+
+- DEV-021: Use text columns with Zod validation instead of pgEnum - Per DEV-012 patterns and existing codebase convention, the project uses text columns with runtime Zod validation rather than database-level enums. This avoids migration complexity when adding new enum values. Apply to all category/priority/status fields in job pipeline tables.
+- DEV-022: Use uniqueIndex() not index().unique() for composite unique constraints - Drizzle ORM API does not support `.unique()` method on index builder. Must use `uniqueIndex()` function for composite unique constraints on (source, sourceJobId) lookup patterns.
+
 ### Pending Todos
 
 None yet.
@@ -115,6 +121,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-12 (Phase 4 context discussion)
-Stopped at: Phase 4 context complete - ready for research or planning
-Resume file: .planning/phases/04-job-data-pipeline/04-CONTEXT.md
+Last session: 2026-03-14 (Plan 04-01 execution)
+Stopped at: Plan 04-01 complete - job data schema and CRUD functions ready
+Resume file: .planning/phases/04-job-data-pipeline/04-01-SUMMARY.md
+Next action: Execute plan 04-02 (API adapters) or continue with Phase 4 plans
