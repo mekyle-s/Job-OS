@@ -10,19 +10,19 @@ See: .planning/PROJECT.md (updated 2026-03-08)
 ## Current Position
 
 Phase: 4 of 6 (Job Data Pipeline) — IN PROGRESS
-Plan: 2 of 5 complete
-Status: Source adapters and requirement extraction ready - Greenhouse API integration with conservative LLM extraction
-Last activity: 2026-03-14 — Completed 04-02-PLAN.md (API Adapters and Requirement Extractor)
+Plan: 3 of 5 complete
+Status: Background workers and cron pipeline ready - Job polling and requirement extraction automated
+Last activity: 2026-03-14 — Completed 04-03-PLAN.md (Background Workers and Cron)
 
-Progress: [██████████████████░░] 95% (Overall: 10 of 10 plans complete in Phases 1-4)
+Progress: [██████████████████░░] 96% (Overall: 11 of 11 plans complete in Phases 1-4)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 10
-- Average duration: 38.1 minutes
-- Total execution time: 6.35 hours (381 minutes)
+- Total plans completed: 11
+- Average duration: 35.5 minutes
+- Total execution time: 6.51 hours (391 minutes)
 
 **By Phase:**
 
@@ -31,12 +31,12 @@ Progress: [██████████████████░░] 95% (Ov
 | 01-foundation-setup    | 2     | 13 min  | 6.5 min  |
 | 02-authentication      | 2     | 187 min | 93.5 min |
 | 03-evidence-foundation | 4     | 147 min | 36.8 min |
-| 04-job-data-pipeline   | 2     | 6 min   | 3 min    |
+| 04-job-data-pipeline   | 3     | 11 min  | 3.7 min  |
 
 **Recent Trend:**
 
-- Last 5 plans: 03-03 (5 min), 03-04 (135 min checkpoint w/ debugging), 04-01 (4 min), 04-02 (2 min)
-- Trend: Phase 4 maintaining excellent velocity - both plans executed in under 5 minutes each with zero deviations
+- Last 5 plans: 03-04 (135 min checkpoint w/ debugging), 04-01 (4 min), 04-02 (2 min), 04-03 (5 min)
+- Trend: Phase 4 maintaining excellent velocity - all three plans executed in under 6 minutes each with minimal deviations (only build-time fixes)
 
 _Updated after each plan completion_
 
@@ -102,6 +102,10 @@ Recent decisions affecting current work:
 - DEV-021: Use text columns with Zod validation instead of pgEnum - Per DEV-012 patterns and existing codebase convention, the project uses text columns with runtime Zod validation rather than database-level enums. This avoids migration complexity when adding new enum values. Apply to all category/priority/status fields in job pipeline tables.
 - DEV-022: Use uniqueIndex() not index().unique() for composite unique constraints - Drizzle ORM API does not support `.unique()` method on index builder. Must use `uniqueIndex()` function for composite unique constraints on (source, sourceJobId) lookup patterns.
 
+**From 04-03 (Background Workers and Cron):**
+
+- DEV-023: pg-boss work() does not accept teamSize option - The pg-boss WorkOptions interface does not support a `teamSize` concurrency option. Workers use default concurrency settings. For custom concurrency control, use pg-boss built-in options like `teamConcurrency` or configure at the queue level.
+
 ### Pending Todos
 
 None yet.
@@ -115,13 +119,16 @@ None yet.
 - BLOCKER: User must add OPENAI_API_KEY to .env.local before resume parsing will work in Plan 03-02. Get API key from https://platform.openai.com/api-keys
 - Embedding dimension optimization needed - pgvector supports up to 2000 dimensions efficiently but OpenAI text-embedding-3-large produces 3072. May need dimension reduction or different embedding model (deferred to Phase 5).
 
-**Phase 4:** Job board API access validation needed - Indeed and LinkedIn have strict requirements. May need to start with smaller boards or user-submitted URLs in V1.
+**Phase 4:**
+
+- BLOCKER: User must add CRON_SECRET to .env.local for cron endpoint security. Generate with: `openssl rand -base64 32`. Also add to Vercel project env vars for production.
+- Job board API access validation needed - Indeed and LinkedIn have strict requirements. May need to start with smaller boards or user-submitted URLs in V1.
 
 **Phase 5:** Confidence threshold calibration (85%+ for auto-accept, 70-85% for review, <70% quarantine) needs validation with real data. Plan A/B testing during Phase 5.
 
 ## Session Continuity
 
-Last session: 2026-03-14 (Plan 04-02 execution)
-Stopped at: Plan 04-02 complete - Source adapters and requirement extractor ready
-Resume file: .planning/phases/04-job-data-pipeline/04-02-SUMMARY.md
-Next action: Execute plan 04-03 (requirement extraction worker) or continue with Phase 4 plans
+Last session: 2026-03-14 (Plan 04-03 execution)
+Stopped at: Plan 04-03 complete - Background workers and cron pipeline ready
+Resume file: .planning/phases/04-job-data-pipeline/04-03-SUMMARY.md
+Next action: Execute plan 04-04 (job criteria management) or continue with Phase 4 plans
