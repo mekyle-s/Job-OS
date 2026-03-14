@@ -10,19 +10,19 @@ See: .planning/PROJECT.md (updated 2026-03-08)
 ## Current Position
 
 Phase: 4 of 6 (Job Data Pipeline) — IN PROGRESS
-Plan: 3 of 5 complete
-Status: Background workers and cron pipeline ready - Job polling and requirement extraction automated
-Last activity: 2026-03-14 — Completed 04-03-PLAN.md (Background Workers and Cron)
+Plan: 4 of 5 complete
+Status: REST API complete for criteria, jobs, and requirements management
+Last activity: 2026-03-14 — Completed 04-04-PLAN.md (Job Data Management API)
 
-Progress: [██████████████████░░] 96% (Overall: 11 of 11 plans complete in Phases 1-4)
+Progress: [███████████████████░] 97% (Overall: 12 of 12 plans complete in Phases 1-4)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 11
-- Average duration: 35.5 minutes
-- Total execution time: 6.51 hours (391 minutes)
+- Total plans completed: 12
+- Average duration: 32.8 minutes
+- Total execution time: 6.56 hours (394 minutes)
 
 **By Phase:**
 
@@ -31,12 +31,12 @@ Progress: [██████████████████░░] 96% (Ov
 | 01-foundation-setup    | 2     | 13 min  | 6.5 min  |
 | 02-authentication      | 2     | 187 min | 93.5 min |
 | 03-evidence-foundation | 4     | 147 min | 36.8 min |
-| 04-job-data-pipeline   | 3     | 11 min  | 3.7 min  |
+| 04-job-data-pipeline   | 4     | 14 min  | 3.5 min  |
 
 **Recent Trend:**
 
-- Last 5 plans: 03-04 (135 min checkpoint w/ debugging), 04-01 (4 min), 04-02 (2 min), 04-03 (5 min)
-- Trend: Phase 4 maintaining excellent velocity - all three plans executed in under 6 minutes each with minimal deviations (only build-time fixes)
+- Last 5 plans: 04-01 (4 min), 04-02 (2 min), 04-03 (5 min), 04-04 (3 min)
+- Trend: Phase 4 maintaining exceptional velocity - all four plans executed in under 6 minutes each with minimal deviations (only type compatibility fixes)
 
 _Updated after each plan completion_
 
@@ -106,6 +106,11 @@ Recent decisions affecting current work:
 
 - DEV-023: pg-boss work() does not accept teamSize option - The pg-boss WorkOptions interface does not support a `teamSize` concurrency option. Workers use default concurrency settings. For custom concurrency control, use pg-boss built-in options like `teamConcurrency` or configure at the queue level.
 
+**From 04-04 (Job Data Management API):**
+
+- DEV-024: Use verifySession for API routes instead of requireUser - API routes return JSON responses, not HTML redirects. verifySession returns null instead of redirecting, allowing proper 401 JSON error responses per REST conventions. Consistent authentication pattern across all API routes.
+- DEV-025: Convert null to undefined for optional criteria fields - Zod schemas use .nullable().optional() for frontend flexibility, but database query functions expect string | undefined. Use field ?? undefined pattern per DEV-020 to convert null to undefined when passing to database layer. Maintains type safety at API/database boundary.
+
 ### Pending Todos
 
 None yet.
@@ -128,7 +133,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-14 (Plan 04-03 execution)
-Stopped at: Plan 04-03 complete - Background workers and cron pipeline ready
-Resume file: .planning/phases/04-job-data-pipeline/04-03-SUMMARY.md
-Next action: Execute plan 04-04 (job criteria management) or continue with Phase 4 plans
+Last session: 2026-03-14 (Plan 04-04 execution)
+Stopped at: Plan 04-04 complete - REST API for criteria, jobs, and requirements ready
+Resume file: .planning/phases/04-job-data-pipeline/04-04-SUMMARY.md
+Next action: Execute plan 04-05 (job data UI) to complete Phase 4
