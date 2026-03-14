@@ -1,6 +1,11 @@
 import { PgBoss } from 'pg-boss';
+import { jobPollerHandler } from './workers/job-poller';
+import { requirementParserHandler } from './workers/requirement-parser';
 
 let boss: PgBoss | null = null;
+
+// Track registered workers to ensure idempotency
+const registeredWorkers = new Set<string>();
 
 export function getJobQueue(): PgBoss {
   if (!boss) {
@@ -29,5 +34,26 @@ export async function stopJobQueue(): Promise<void> {
     await boss.stop({ graceful: true, timeout: 30000 });
     boss = null;
     console.log('pg-boss job queue stopped');
+  }
+}
+
+/**
+ * Register job workers (idempotent)
+ *
+ * Must be called after starting pg-boss and before sending jobs to the queue.
+ * This ensures workers are registered and ready to process jobs.
+ */
+export async function registerJobWorkers(boss: PgBoss): Promise<void> {
+  // Only register if not already registered (idempotent)
+  if (!registeredWorkers.has('poll-jobs-for-user')) {
+    await boss.work('poll-jobs-for-user', jobPollerHandler);
+    registeredWorkers.add('poll-jobs-for-user');
+    console.log('Registered worker: poll-jobs-for-user');
+  }
+
+  if (!registeredWorkers.has('extract-requirements')) {
+    await boss.work('extract-requirements', requirementParserHandler);
+    registeredWorkers.add('extract-requirements');
+    console.log('Registered worker: extract-requirements');
   }
 }
