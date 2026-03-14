@@ -14,9 +14,9 @@ This roadmap delivers a proof-first internship application platform through six 
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation Setup** - Project scaffolding and infrastructure
-- [ ] **Phase 2: Authentication** - User accounts and session management
-- [ ] **Phase 3: Evidence Foundation** - Resume parsing and evidence extraction
-- [ ] **Phase 4: Job Data Pipeline** - Job monitoring and requirement extraction
+- [x] **Phase 2: Authentication** - User accounts and session management
+- [x] **Phase 3: Evidence Foundation** - Resume parsing and evidence extraction
+- [x] **Phase 4: Job Data Pipeline** - Job monitoring and requirement extraction
 - [ ] **Phase 5: Matching Core** - Proof-based ranking and role briefs
 - [ ] **Phase 6: Tracking & Notifications** - Application tracking and alerts
 
@@ -55,8 +55,8 @@ Plans:
 
 Plans:
 
-- [ ] 02-01-PLAN.md — Better Auth backend: schema migration, server/client config, Resend email, API route
-- [ ] 02-02-PLAN.md — Auth UI: sign-up/sign-in/sign-out pages, password reset, middleware, protected dashboard
+- [x] 02-01-PLAN.md — Better Auth backend: schema migration, server/client config, Resend email, API route
+- [x] 02-02-PLAN.md — Auth UI: sign-up/sign-in/sign-out pages, password reset, middleware, protected dashboard
 
 ### Phase 3: Evidence Foundation
 
@@ -74,10 +74,10 @@ Plans:
 
 Plans:
 
-- [ ] 03-01-PLAN.md — Evidence database schema, Zod validation schemas, and CRUD query functions
-- [ ] 03-02-PLAN.md — Resume text extraction (PDF/DOCX), OpenAI LLM parsing, pg-boss worker, upload/status API routes
-- [ ] 03-03-PLAN.md — Evidence management UI: list, manual add, edit, delete with confidence badges
-- [ ] 03-04-PLAN.md — Upload UI with drag-and-drop, parse status polling, end-to-end verification
+- [x] 03-01-PLAN.md — Evidence database schema, Zod validation schemas, and CRUD query functions
+- [x] 03-02-PLAN.md — Resume text extraction (PDF/DOCX), OpenAI LLM parsing, pg-boss worker, upload/status API routes
+- [x] 03-03-PLAN.md — Evidence management UI: list, manual add, edit, delete with confidence badges
+- [x] 03-04-PLAN.md — Upload UI with drag-and-drop, parse status polling, end-to-end verification
 
 ### Phase 4: Job Data Pipeline
 
@@ -89,16 +89,16 @@ Plans:
 1. User can define target criteria (function, location, visa status, companies)
 2. System fetches roles from supported sources matching user criteria
 3. User can view job listings with title, company, location, and freshness indicator
-4. Job postings display extracted requirements with review states
+4. Job postings display extracted requirements with simple review states (not confidence scores)
    **Plans**: 5 plans in 5 waves
 
 Plans:
 
-- [ ] 04-01-PLAN.md -- Database schema, Zod validation, and CRUD queries for jobs, requirements, and user criteria
-- [ ] 04-02-PLAN.md -- Source adapter interface, Greenhouse adapter, and conservative LLM requirement extractor
-- [ ] 04-03-PLAN.md -- pg-boss workers for job polling and requirement extraction, Vercel Cron endpoint
-- [ ] 04-04-PLAN.md -- REST API routes for criteria, jobs, and requirement management
-- [ ] 04-05-PLAN.md -- UI pages for criteria setup, job listings, and job detail with requirement editing
+- [x] 04-01-PLAN.md -- Database schema, Zod validation, and CRUD queries for jobs, requirements, and user criteria
+- [x] 04-02-PLAN.md -- Source adapter interface, Greenhouse adapter, and conservative LLM requirement extractor
+- [x] 04-03-PLAN.md -- pg-boss workers for job polling and requirement extraction, Vercel Cron endpoint
+- [x] 04-04-PLAN.md -- REST API routes for criteria, jobs, and requirement management
+- [x] 04-05-PLAN.md -- UI pages for criteria setup, job listings, and job detail with requirement editing
 
 ### Phase 5: Matching Core
 
@@ -148,6 +148,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Foundation Setup         | 2/2            | ✓ Complete  | 2026-03-09 |
 | 2. Authentication           | 2/2            | ✓ Complete  | 2026-03-09 |
 | 3. Evidence Foundation      | 4/4            | ✓ Complete  | 2026-03-12 |
-| 4. Job Data Pipeline        | 0/?            | Not started | -          |
+| 4. Job Data Pipeline        | 5/5            | ✓ Complete  | 2026-03-14 |
 | 5. Matching Core            | 0/?            | Not started | -          |
 | 6. Tracking & Notifications | 0/?            | Not started | -          |
