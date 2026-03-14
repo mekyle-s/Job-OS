@@ -1,6 +1,7 @@
 import { requireUser } from '@/lib/auth/session';
 import { SignOutButton } from '@/components/auth/sign-out-button';
 import { getEvidenceItemsByUser } from '@/lib/db/queries/evidence';
+import { getUserCriteria } from '@/lib/db/queries/user-criteria';
 import Link from 'next/link';
 
 export default async function DashboardPage() {
@@ -8,6 +9,7 @@ export default async function DashboardPage() {
   // Middleware provides UX redirects, but this is the actual authorization check
   const user = await requireUser();
   const evidenceItems = await getEvidenceItemsByUser(user.id);
+  const criteria = await getUserCriteria(user.id);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -64,6 +66,53 @@ export default async function DashboardPage() {
                 <span className="text-sm font-medium text-blue-600 hover:text-blue-700">
                   Manage Evidence →
                 </span>
+              </div>
+            </div>
+          </Link>
+
+          {/* Jobs Card */}
+          <Link href="/dashboard/jobs" className="block">
+            <div className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition h-full">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900">Jobs</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {criteria
+                      ? `Monitoring ${criteria.targetCompanies.length} ${criteria.targetCompanies.length === 1 ? 'company' : 'companies'}`
+                      : 'No criteria set up yet'}
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
+                  <svg
+                    className="w-6 h-6 text-green-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <div className="mt-4 pt-4 border-t border-gray-100 space-y-2">
+                <Link
+                  href="/dashboard/criteria"
+                  className="block text-sm font-medium text-green-600 hover:text-green-700"
+                >
+                  {criteria ? 'Edit job criteria' : 'Set up job criteria'} →
+                </Link>
+                {criteria && (
+                  <Link
+                    href="/dashboard/jobs"
+                    className="block text-sm font-medium text-green-600 hover:text-green-700"
+                  >
+                    Browse jobs →
+                  </Link>
+                )}
               </div>
             </div>
           </Link>
