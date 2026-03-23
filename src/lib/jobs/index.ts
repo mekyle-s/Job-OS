@@ -44,6 +44,10 @@ export async function stopJobQueue(): Promise<void> {
  * This ensures workers are registered and ready to process jobs.
  */
 export async function registerJobWorkers(boss: PgBoss): Promise<void> {
+  // Create queues first (pg-boss requires queues to exist before sending)
+  await boss.createQueue('poll-jobs-for-user');
+  await boss.createQueue('extract-requirements');
+
   // Only register if not already registered (idempotent)
   if (!registeredWorkers.has('poll-jobs-for-user')) {
     await boss.work('poll-jobs-for-user', jobPollerHandler);
