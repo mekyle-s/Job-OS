@@ -305,11 +305,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               <p className="text-gray-600 mt-1">
                 {job.company} • {job.location}
               </p>
-              {job.postedAt && (
-                <p className="text-sm text-gray-500 mt-1">
-                  Posted {formatDistanceToNow(new Date(job.postedAt), { addSuffix: true })}
-                </p>
-              )}
+              <p className="text-sm text-gray-500 mt-1">
+                {job.postedAt
+                  ? `Posted ${formatDistanceToNow(new Date(job.postedAt), { addSuffix: true })}`
+                  : `First seen ${formatDistanceToNow(new Date(job.firstSeenAt), { addSuffix: true })}`}
+              </p>
             </div>
             <div className="flex flex-col items-end gap-2">
               {freshness && (
