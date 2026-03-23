@@ -139,8 +139,10 @@ export default function CriteriaPage() {
       }
 
       setSuccess(true);
+
+      // Clear form data to ensure fresh load on next visit
       setTimeout(() => {
-        router.push('/dashboard');
+        window.location.href = '/dashboard'; // Force full page navigation to clear cache
       }, 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save criteria');

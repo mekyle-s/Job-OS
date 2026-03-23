@@ -43,12 +43,13 @@ export async function upsertUserCriteria(
 
   if (existing) {
     // Update existing criteria
+    // Note: Use null explicitly instead of undefined to ensure fields are cleared
     const [updated] = await db
       .update(userCriteria)
       .set({
-        jobFunction: data.jobFunction,
-        locations: data.locations,
-        visaRequired: data.visaRequired,
+        jobFunction: data.jobFunction ?? null,
+        locations: data.locations ?? null,
+        visaRequired: data.visaRequired ?? null,
         targetCompanies: data.targetCompanies,
         updatedAt: new Date(),
       })
