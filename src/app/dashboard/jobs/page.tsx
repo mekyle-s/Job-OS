@@ -45,7 +45,17 @@ export default function JobsPage() {
         const jobsResponse = await fetch(`/api/jobs?limit=${limit}&offset=${offset}`);
         if (jobsResponse.ok) {
           const jobsData = await jobsResponse.json();
-          setJobs((prev) => [...prev, ...jobsData.jobs]);
+          // Deduplicate jobs by ID to prevent React key errors
+          setJobs((prev) => {
+            // If offset is 0, replace all jobs (page reload or first load)
+            if (offset === 0) {
+              return jobsData.jobs;
+            }
+            // Otherwise append new jobs, filtering out duplicates
+            const existingIds = new Set(prev.map((j) => j.id));
+            const newJobs = jobsData.jobs.filter((j: Job) => !existingIds.has(j.id));
+            return [...prev, ...newJobs];
+          });
           setHasMore(jobsData.jobs.length === limit);
         } else {
           const errorData = await jobsResponse.json();
