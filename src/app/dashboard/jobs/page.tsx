@@ -22,6 +22,8 @@ export default function JobsPage() {
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [offset, setOffset] = useState(0);
+  const [isPolling, setIsPolling] = useState(false);
+  const [pollMessage, setPollMessage] = useState<string | null>(null);
   const limit = 20;
 
   useEffect(() => {
@@ -61,6 +63,33 @@ export default function JobsPage() {
 
   const loadMore = () => {
     setOffset((prev) => prev + limit);
+  };
+
+  const triggerPoll = async () => {
+    setIsPolling(true);
+    setPollMessage(null);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/jobs/poll', { method: 'POST' });
+      const data = await response.json();
+
+      if (response.ok) {
+        setPollMessage(
+          `Poll queued! Fetching jobs from ${data.targetCompanies.length} companies. Refresh in 10-30 seconds to see results.`
+        );
+        // Auto-reload after 15 seconds
+        setTimeout(() => {
+          window.location.reload();
+        }, 15000);
+      } else {
+        setError(data.error || 'Failed to trigger poll');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to trigger poll');
+    } finally {
+      setIsPolling(false);
+    }
   };
 
   // Freshness indicator helper
@@ -149,11 +178,26 @@ export default function JobsPage() {
           >
             ← Back to Dashboard
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Jobs</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-gray-900">Jobs</h1>
+            <button
+              onClick={triggerPoll}
+              disabled={isPolling}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"
+            >
+              {isPolling ? 'Polling...' : 'Trigger Poll'}
+            </button>
+          </div>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8">
+        {pollMessage && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+            <p className="text-sm text-green-700">{pollMessage}</p>
+          </div>
+        )}
+
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
             <p className="text-sm text-red-700">{error}</p>
@@ -163,9 +207,16 @@ export default function JobsPage() {
         {jobs.length === 0 && !isLoading && (
           <div className="bg-white rounded-lg shadow p-8 text-center">
             <h2 className="text-lg font-medium text-gray-900 mb-2">No jobs found yet</h2>
-            <p className="text-gray-600">
+            <p className="text-gray-600 mb-4">
               Jobs are polled hourly — check back soon or trigger a manual poll.
             </p>
+            <button
+              onClick={triggerPoll}
+              disabled={isPolling}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              {isPolling ? 'Polling...' : 'Trigger Poll Now'}
+            </button>
           </div>
         )}
 
