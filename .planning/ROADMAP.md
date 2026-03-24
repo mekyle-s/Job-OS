@@ -114,11 +114,14 @@ Plans:
 5. Role brief shows recommended emphasis based on strongest evidence
 6. User can manually edit or remove evidence mappings for any requirement
 7. Changes to evidence or mappings update rankings in real-time
-   **Plans**: TBD
+   **Plans**: 4 plans in 4 waves
 
 Plans:
 
-- [ ] 05-01: [TBD during planning]
+- [ ] 05-01-PLAN.md — Schema migration: vector embedding columns, HNSW indexes, evidence mapping tables, embedding generator
+- [ ] 05-02-PLAN.md — Matching engine: vector similarity search, LLM evidence mapper, weighted ranker, gap analyzer
+- [ ] 05-03-PLAN.md — API routes: matching trigger, queue, brief, mapping CRUD + TanStack Query setup
+- [ ] 05-04-PLAN.md — UI: Fresh Match Queue page with role cards, Role Brief page with proof mapping and mapping controls
 
 ### Phase 6: Tracking & Notifications
 
