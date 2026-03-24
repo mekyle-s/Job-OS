@@ -118,9 +118,9 @@ Plans:
 
 Plans:
 
-- [ ] 05-01-PLAN.md — Schema migration: vector embedding columns, HNSW indexes, evidence mapping tables, embedding generator
-- [ ] 05-02-PLAN.md — Matching engine: vector similarity search, LLM evidence mapper, weighted ranker, gap analyzer
-- [ ] 05-03-PLAN.md — API routes: matching trigger, queue, brief, mapping CRUD + TanStack Query setup
+- [ ] 05-01-PLAN.md — Schema migration: vector embedding columns, HNSW indexes, evidence mapping tables, version constants, Zod schemas
+- [ ] 05-02-PLAN.md — Matching engine: embedder, eligibility filters, vector similarity, LLM mapper, ranker, gap analyzer, pipeline orchestrator
+- [ ] 05-03-PLAN.md — API routes: matching trigger, queue, brief, mapping CRUD + TanStack Query provider and hooks
 - [ ] 05-04-PLAN.md — UI: Fresh Match Queue page with role cards, Role Brief page with proof mapping and mapping controls
 
 ### Phase 6: Tracking & Notifications
