@@ -10,19 +10,19 @@ See: .planning/PROJECT.md (updated 2026-03-08)
 ## Current Position
 
 Phase: 5 of 6 (Matching Core) — IN PROGRESS
-Plan: 2 of 4 complete
-Status: Matching engine modules complete (embedder, LLM mapper, ranker, gap analyzer, pipeline orchestrator)
-Last activity: 2026-03-30 — Completed 05-02-PLAN.md (Matching Engine Modules)
+Plan: 3 of 4 complete
+Status: Matching API and client hooks ready, UI layer next
+Last activity: 2026-03-30 — Completed 05-03-PLAN.md (Matching API & Client Hooks)
 
-Progress: [████████████████████] 70% (Overall: 14 of 20 plans complete)
+Progress: [█████████████████████] 75% (Overall: 15 of 20 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 14
-- Average duration: 28.1 minutes
-- Total execution time: 6.73 hours (404 minutes)
+- Total plans completed: 15
+- Average duration: 27.2 minutes
+- Total execution time: 6.8 hours (408 minutes)
 
 **By Phase:**
 
@@ -32,12 +32,12 @@ Progress: [████████████████████] 70% (Ov
 | 02-authentication      | 2     | 187 min | 93.5 min |
 | 03-evidence-foundation | 4     | 147 min | 36.8 min |
 | 04-job-data-pipeline   | 4     | 14 min  | 3.5 min  |
-| 05-matching-core       | 2     | 10 min  | 5.0 min  |
+| 05-matching-core       | 3     | 14 min  | 4.7 min  |
 
 **Recent Trend:**
 
-- Last 5 plans: 04-03 (5 min), 04-04 (3 min), 05-01 (4 min), 05-02 (6 min)
-- Trend: Maintaining exceptional velocity - Phase 4 and 5 plans executing in under 6 minutes with zero deviations
+- Last 5 plans: 04-04 (3 min), 05-01 (4 min), 05-02 (6 min), 05-03 (4 min)
+- Trend: Maintaining exceptional velocity - Phase 4 and 5 plans executing in 3-6 minutes with minimal deviations
 
 _Updated after each plan completion_
 
@@ -141,7 +141,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-30 (Plan 05-02 execution)
-Stopped at: Plan 05-02 complete - Matching engine modules ready (embedder, mapper, ranker, gap analyzer, pipeline)
-Resume file: .planning/phases/05-matching-core/05-02-SUMMARY.md
-Next action: Execute plan 05-03 (Matching API) to expose matching engine via REST endpoints
+Last session: 2026-03-30 (Plan 05-03 execution)
+Stopped at: Plan 05-03 complete - Matching API and TanStack Query hooks ready for UI consumption
+Resume file: .planning/phases/05-matching-core/05-03-SUMMARY.md
+Next action: Execute plan 05-04 (Matching UI) to build queue dashboard, role brief view, and mapping edit forms
