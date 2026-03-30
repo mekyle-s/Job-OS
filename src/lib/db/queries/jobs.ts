@@ -173,6 +173,12 @@ export async function getJobsForUser(
       isActive: job.isActive,
       firstSeenAt: job.firstSeenAt,
       createdAt: job.createdAt,
+      visaSponsorship: job.visaSponsorship,
+      remotePolicy: job.remotePolicy,
+      roleType: job.roleType,
+      season: job.season,
+      graduationWindow: job.graduationWindow,
+      lastMatchedAt: job.lastMatchedAt,
       requirementCount: sql<number>`cast(count(${requirement.id}) as integer)`,
     })
     .from(job)
@@ -202,6 +208,12 @@ export async function getJobsForUser(
     isActive: j.isActive,
     firstSeenAt: j.firstSeenAt,
     createdAt: j.createdAt,
+    visaSponsorship: j.visaSponsorship,
+    remotePolicy: j.remotePolicy,
+    roleType: j.roleType,
+    season: j.season,
+    graduationWindow: j.graduationWindow,
+    lastMatchedAt: j.lastMatchedAt,
     _count: { requirements: j.requirementCount },
   }));
 }
