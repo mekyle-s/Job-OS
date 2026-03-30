@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { evidenceMapping, evidenceMappingAudit, evidenceItem } from '@/lib/db/schema';
+import { evidenceMapping, evidenceMappingAudit, evidenceItem, requirement } from '@/lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import type { InferSelectModel } from 'drizzle-orm';
 
@@ -296,7 +296,8 @@ export async function getEvidenceMappingsForJob(
     })
     .from(evidenceMapping)
     .innerJoin(evidenceItem, eq(evidenceMapping.evidenceItemId, evidenceItem.id))
-    .where(eq(evidenceMapping.userId, userId));
+    .innerJoin(requirement, eq(evidenceMapping.requirementId, requirement.id))
+    .where(and(eq(requirement.jobId, jobId), eq(evidenceMapping.userId, userId)));
 
   return results;
 }
