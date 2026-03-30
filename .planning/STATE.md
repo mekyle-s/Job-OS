@@ -9,20 +9,20 @@ See: .planning/PROJECT.md (updated 2026-03-08)
 
 ## Current Position
 
-Phase: 4 of 6 (Job Data Pipeline) — IN PROGRESS
-Plan: 4 of 5 complete
-Status: REST API complete for criteria, jobs, and requirements management
-Last activity: 2026-03-14 — Completed 04-04-PLAN.md (Job Data Management API)
+Phase: 5 of 6 (Matching Core) — IN PROGRESS
+Plan: 1 of 4 complete
+Status: Vector infrastructure and schema foundation complete
+Last activity: 2026-03-30 — Completed 05-01-PLAN.md (Schema Migration)
 
-Progress: [███████████████████░] 97% (Overall: 12 of 12 plans complete in Phases 1-4)
+Progress: [███████████████████░] 75% (Overall: 13 of 20 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 12
-- Average duration: 32.8 minutes
-- Total execution time: 6.56 hours (394 minutes)
+- Total plans completed: 13
+- Average duration: 30.3 minutes
+- Total execution time: 6.63 hours (398 minutes)
 
 **By Phase:**
 
@@ -32,11 +32,12 @@ Progress: [███████████████████░] 97% (Ov
 | 02-authentication      | 2     | 187 min | 93.5 min |
 | 03-evidence-foundation | 4     | 147 min | 36.8 min |
 | 04-job-data-pipeline   | 4     | 14 min  | 3.5 min  |
+| 05-matching-core       | 1     | 4 min   | 4.0 min  |
 
 **Recent Trend:**
 
-- Last 5 plans: 04-01 (4 min), 04-02 (2 min), 04-03 (5 min), 04-04 (3 min)
-- Trend: Phase 4 maintaining exceptional velocity - all four plans executed in under 6 minutes each with minimal deviations (only type compatibility fixes)
+- Last 5 plans: 04-02 (2 min), 04-03 (5 min), 04-04 (3 min), 05-01 (4 min)
+- Trend: Maintaining exceptional velocity - Phase 4 and 5 plans executing in under 6 minutes with minimal deviations
 
 _Updated after each plan completion_
 
@@ -111,6 +112,13 @@ Recent decisions affecting current work:
 - DEV-024: Use verifySession for API routes instead of requireUser - API routes return JSON responses, not HTML redirects. verifySession returns null instead of redirecting, allowing proper 401 JSON error responses per REST conventions. Consistent authentication pattern across all API routes.
 - DEV-025: Convert null to undefined for optional criteria fields - Zod schemas use .nullable().optional() for frontend flexibility, but database query functions expect string | undefined. Use field ?? undefined pattern per DEV-020 to convert null to undefined when passing to database layer. Maintains type safety at API/database boundary.
 
+**From 05-01 (Schema Migration):**
+
+- DEV-026: Custom migration runner for complex migrations - pgvector extension enablement and HNSW index creation require specific ordering (extension → tables → indexes). Split migrations into pre/main/post scripts with custom runner instead of standard drizzle-kit migrate. Pattern: scripts/run-{feature}-migration.ts for non-standard migrations.
+- DEV-027: Explicit environment variable loading for tsx scripts - tsx doesn't auto-load .env.local. Migration and utility scripts must explicitly import dotenv and call config({ path: '.env.local' }) at top of file. Prevents SASL/connection errors from undefined DATABASE_URL.
+- DEV-028: Vector columns require nullable option - Vector embedding columns on evidence_item and requirement tables should be nullable to allow content without embeddings. Use `vector('embedding', { dimensions: 1536 })` (nullable by default) to support gradual embedding generation.
+- DEV-029: Query selects must include all schema columns - When schema adds new columns, all SELECT queries must explicitly include them in both select() clause and return mapping. TypeScript will error on missing properties. Update pattern: add to select(), add to .groupBy() if using aggregation, add to return mapping.
+
 ### Pending Todos
 
 None yet.
@@ -133,7 +141,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-14 (Plan 04-04 execution)
-Stopped at: Plan 04-04 complete - REST API for criteria, jobs, and requirements ready
-Resume file: .planning/phases/04-job-data-pipeline/04-04-SUMMARY.md
-Next action: Execute plan 04-05 (job data UI) to complete Phase 4
+Last session: 2026-03-30 (Plan 05-01 execution)
+Stopped at: Plan 05-01 complete - Vector infrastructure and schema foundation ready
+Resume file: .planning/phases/05-matching-core/05-01-SUMMARY.md
+Next action: Execute plan 05-02 (Embedding Generation) to continue Phase 5
