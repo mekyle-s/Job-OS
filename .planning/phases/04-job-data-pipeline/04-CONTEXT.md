@@ -9,7 +9,7 @@
 1. User can define target criteria (function, location, visa status, companies)
 2. System fetches roles from supported sources matching user criteria
 3. User can view job listings with title, company, location, freshness indicator
-4. Job postings display extracted requirements with confidence scores
+4. Job postings display extracted requirements with simple review states
 
 ---
 
