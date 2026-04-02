@@ -135,11 +135,13 @@ Plans:
 3. User can export proof summary for a specific role
 4. User receives email alert when new high-fit role appears in queue
 5. System logs parser confidence and user corrections for audit
-   **Plans**: TBD
+   **Plans**: 3 plans in 3 waves
 
 Plans:
 
-- [ ] 06-01: [TBD during planning]
+- [ ] 06-01-PLAN.md — Role status + audit schema, migration, Zod validation, CRUD queries
+- [ ] 06-02-PLAN.md — Role status API routes, React Email template, notification worker, cron endpoint
+- [ ] 06-03-PLAN.md — Queue status filters (nuqs), role card status buttons, print-optimized export page
 
 ## Progress
 
