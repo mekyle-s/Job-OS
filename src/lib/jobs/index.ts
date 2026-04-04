@@ -1,6 +1,7 @@
 import { PgBoss } from 'pg-boss';
 import { jobPollerHandler } from './workers/job-poller';
 import { requirementParserHandler } from './workers/requirement-parser';
+import { notificationDispatcherHandler } from './workers/notification-dispatcher';
 
 let boss: PgBoss | null = null;
 
@@ -47,6 +48,7 @@ export async function registerJobWorkers(boss: PgBoss): Promise<void> {
   // Create queues first (pg-boss requires queues to exist before sending)
   await boss.createQueue('poll-jobs-for-user');
   await boss.createQueue('extract-requirements');
+  await boss.createQueue('dispatch-notifications');
 
   // Only register if not already registered (idempotent)
   if (!registeredWorkers.has('poll-jobs-for-user')) {
@@ -59,5 +61,11 @@ export async function registerJobWorkers(boss: PgBoss): Promise<void> {
     await boss.work('extract-requirements', requirementParserHandler);
     registeredWorkers.add('extract-requirements');
     console.log('Registered worker: extract-requirements');
+  }
+
+  if (!registeredWorkers.has('dispatch-notifications')) {
+    await boss.work('dispatch-notifications', notificationDispatcherHandler);
+    registeredWorkers.add('dispatch-notifications');
+    console.log('Registered worker: dispatch-notifications');
   }
 }
