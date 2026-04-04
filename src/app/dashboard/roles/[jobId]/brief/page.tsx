@@ -154,6 +154,12 @@ export default function RoleBriefPage() {
               >
                 {brief.fitBand} Fit
               </span>
+              <Link
+                href={`/dashboard/roles/${jobId}/export`}
+                className="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition font-medium text-sm"
+              >
+                Export PDF
+              </Link>
               {getMatchingButton()}
             </div>
           </div>
@@ -185,9 +191,7 @@ export default function RoleBriefPage() {
                 <span className="text-sm text-gray-600 ml-1">covered</span>
               </div>
               <div>
-                <span className="text-2xl font-bold text-red-600">
-                  {brief.fitSummary.gaps}
-                </span>
+                <span className="text-2xl font-bold text-red-600">{brief.fitSummary.gaps}</span>
                 <span className="text-sm text-gray-600 ml-1">gaps</span>
               </div>
               {brief.fitSummary.needsReview > 0 && (
@@ -221,9 +225,7 @@ export default function RoleBriefPage() {
         {/* Covered Requirements Section */}
         {brief.requirementMap.covered.length > 0 && (
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Covered Requirements
-            </h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Covered Requirements</h2>
             <div className="space-y-6">
               {Object.entries(groupedCovered).map(
                 ([category, requirements]: [string, CoveredRequirements]) => (
@@ -252,15 +254,10 @@ export default function RoleBriefPage() {
             </h2>
             <div className="space-y-3">
               {brief.requirementMap.gaps.map((gap: RequirementItem) => (
-                <div
-                  key={gap.id}
-                  className="border-l-4 border-red-300 bg-red-50 p-4 rounded-r-lg"
-                >
+                <div key={gap.id} className="border-l-4 border-red-300 bg-red-50 p-4 rounded-r-lg">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <p className="text-sm text-gray-900 font-medium">
-                        {gap.normalizedText}
-                      </p>
+                      <p className="text-sm text-gray-900 font-medium">{gap.normalizedText}</p>
                       <div className="flex items-center gap-2 mt-2">
                         <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700">
                           {gap.category.replace(/_/g, ' ')}
