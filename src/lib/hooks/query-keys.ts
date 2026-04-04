@@ -9,3 +9,9 @@ export const matchKeys = {
   brief: (jobId: string) => [...matchKeys.all, 'brief', jobId] as const,
   mappings: (jobId: string) => [...matchKeys.all, 'mappings', jobId] as const,
 };
+
+export const roleStatusKeys = {
+  all: ['roleStatus'] as const,
+  forJob: (jobId: string) => [...roleStatusKeys.all, jobId] as const,
+  forUser: () => [...roleStatusKeys.all, 'user'] as const,
+};

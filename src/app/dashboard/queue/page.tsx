@@ -1,14 +1,19 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useMatchQueue } from '@/lib/hooks/use-match-queue';
 import { useRunMatching } from '@/lib/hooks/use-role-brief';
 import Link from 'next/link';
 import { RoleCard } from './role-card';
+import { QueueFilters, useStatusFilter } from './filters';
+import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import type { RankedJob } from '@/lib/matching/ranker';
+import { useRoleStatus } from '@/lib/hooks/use-role-status';
 
-export default function MatchQueuePage() {
+function MatchQueueContent() {
   const { data, isLoading, error, refetch } = useMatchQueue();
   const runMatching = useRunMatching();
+  const statusFilter = useStatusFilter();
 
   if (isLoading) {
     return (
@@ -110,13 +115,73 @@ export default function MatchQueuePage() {
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
-            {queue.map((job) => (
-              <RoleCard key={job.jobId} job={job} />
-            ))}
-          </div>
+          <>
+            <QueueFilters />
+            <FilteredQueueList queue={queue} statusFilter={statusFilter} />
+          </>
         )}
       </main>
     </div>
+  );
+}
+
+/**
+ * Component that filters queue by status.
+ * Each RoleCard fetches its own status and we filter client-side.
+ */
+function FilteredQueueList({ queue, statusFilter }: { queue: RankedJob[]; statusFilter: string }) {
+  // For V1 simplicity: render all cards and let them fetch their own status
+  // The filtering happens via CSS visibility based on status
+  // This avoids complex state coordination at the cost of fetching all statuses
+  return (
+    <div className="space-y-4">
+      {queue.map((job) => (
+        <RoleCardWithFilter key={job.jobId} job={job} statusFilter={statusFilter} />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Wrapper that fetches status and conditionally renders the card.
+ */
+function RoleCardWithFilter({ job, statusFilter }: { job: RankedJob; statusFilter: string }) {
+  const { data: roleStatus } = useRoleStatus(job.jobId);
+
+  // Determine if this card should be visible based on filter
+  const shouldShow = () => {
+    if (statusFilter === 'all') return true;
+    return roleStatus?.status === statusFilter;
+  };
+
+  if (!shouldShow()) {
+    return null;
+  }
+
+  return <RoleCard job={job} />;
+}
+
+export default function MatchQueuePage() {
+  return (
+    <NuqsAdapter>
+      <Suspense
+        fallback={
+          <div className="min-h-screen bg-gray-50">
+            <header className="bg-white shadow-sm">
+              <div className="max-w-4xl mx-auto px-4 py-4">
+                <h1 className="text-2xl font-bold text-gray-900">Fresh Match Queue</h1>
+              </div>
+            </header>
+            <main className="max-w-4xl mx-auto px-4 py-8">
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            </main>
+          </div>
+        }
+      >
+        <MatchQueueContent />
+      </Suspense>
+    </NuqsAdapter>
   );
 }
