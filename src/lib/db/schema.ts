@@ -18,6 +18,7 @@ export const user = pgTable('users', {
   emailVerified: boolean('email_verified').default(false).notNull(),
   name: text('name'),
   image: text('image'),
+  lastNotifiedAt: timestamp('last_notified_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
@@ -178,9 +179,7 @@ export const rawJobSource = pgTable(
     rawData: jsonb('raw_data').notNull(),
     fetchedAt: timestamp('fetched_at', { withTimezone: true }).notNull(),
   },
-  (table) => [
-    uniqueIndex('raw_job_source_lookup_idx').on(table.source, table.sourceJobId),
-  ]
+  (table) => [uniqueIndex('raw_job_source_lookup_idx').on(table.source, table.sourceJobId)]
 );
 
 // Job table - canonical normalized model
@@ -353,5 +352,58 @@ export const evidenceMappingAudit = pgTable(
   (table) => [
     index('evidence_mapping_audit_mapping_id_idx').on(table.mappingId),
     index('evidence_mapping_audit_user_id_idx').on(table.userId),
+  ]
+);
+
+// ============================================================
+// Tracking & Notification Tables (Phase 6)
+// ============================================================
+
+// Role status table - tracks user's application progress per job
+// Per DEV-021: text column with Zod validation at runtime (not pgEnum)
+export const roleStatus = pgTable(
+  'role_status',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    jobId: text('job_id')
+      .notNull()
+      .references(() => job.id, { onDelete: 'cascade' }),
+    status: text('status').notNull(), // 'ignore' | 'save' | 'apply' | 'applied' - validated by Zod at runtime
+    notes: text('notes'),
+    statusChangedAt: timestamp('status_changed_at', { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('role_status_user_id_idx').on(table.userId),
+    index('role_status_job_id_idx').on(table.jobId),
+    index('role_status_status_idx').on(table.status),
+    uniqueIndex('role_status_user_job_idx').on(table.userId, table.jobId),
+  ]
+);
+
+// Parser audit table - unified audit trail for parser actions and corrections
+export const parserAudit = pgTable(
+  'parser_audit',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').references(() => user.id, { onDelete: 'cascade' }), // nullable for system actions
+    entityType: text('entity_type').notNull(), // 'requirement' | 'evidence' | 'mapping' | 'role_status'
+    entityId: text('entity_id').notNull(),
+    action: text('action').notNull(), // 'create' | 'update' | 'delete' | 'accept' | 'reject' | 'status_change'
+    parserConfidence: real('parser_confidence'), // 0.0-1.0 for original parser confidence
+    beforeValue: jsonb('before_value'),
+    afterValue: jsonb('after_value'),
+    source: text('source').notNull().default('user'), // 'user' | 'system'
+    userFeedback: text('user_feedback'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('parser_audit_user_id_idx').on(table.userId),
+    index('parser_audit_entity_idx').on(table.entityType, table.entityId),
+    index('parser_audit_created_at_idx').on(table.createdAt),
   ]
 );
