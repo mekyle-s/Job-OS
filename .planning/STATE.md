@@ -148,9 +148,15 @@ None yet.
 
 - BLOCKER: User must add RESEND_API_KEY to .env.local before email notifications will work in Plan 06-02. Get API key from https://resend.com/api-keys
 
+### Quick Tasks Completed
+
+| #   | Description                                   | Date       | Commit  | Directory                                                                                         |
+| --- | --------------------------------------------- | ---------- | ------- | ------------------------------------------------------------------------------------------------- |
+| 1   | Execute plan 06-05 - fix queue cache eviction | 2026-04-06 | 950f437 | [1-execute-plan-06-05-fix-queue-cache-evict](./quick/1-execute-plan-06-05-fix-queue-cache-evict/) |
+
 ## Session Continuity
 
-Last session: 2026-04-06 (Plan 06-04 execution - gap closure)
-Stopped at: Plan 06-04 complete - Queue status filtering bug fixed
-Resume file: .planning/phases/06-tracking-notifications/06-04-SUMMARY.md
-Next action: UAT re-test to verify Test 2 gap closure, then proceed to next phase or final testing
+Last session: 2026-04-06 (Quick task 1 - Queue cache eviction fix)
+Stopped at: Quick task 1 complete - Extended gcTime to prevent queue data disappearing
+Resume file: .planning/quick/1-execute-plan-06-05-fix-queue-cache-evict/1-SUMMARY.md
+Next action: UAT re-test to verify queue persists during navigation (Test 4), then complete Phase 6 verification
