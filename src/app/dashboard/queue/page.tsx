@@ -15,6 +15,13 @@ function MatchQueueContent() {
   const runMatching = useRunMatching();
   const statusFilter = useStatusFilter();
 
+  console.log('[MatchQueueContent] Render:', {
+    isLoading,
+    hasData: !!data,
+    queueLength: data?.queue?.length || 0,
+    hasError: !!error,
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">

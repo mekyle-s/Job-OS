@@ -1,15 +1,8 @@
 import type { Job } from 'pg-boss';
 import { getAdapter } from '../sources';
 import type { UserCriteriaInput } from '../sources/adapter';
-import {
-  getUserCriteria,
-  updateLastPolledAt,
-} from '@/lib/db/queries/user-criteria';
-import {
-  upsertRawJobSource,
-  upsertJob,
-  markJobsInactive,
-} from '@/lib/db/queries/jobs';
+import { getUserCriteria, updateLastPolledAt } from '@/lib/db/queries/user-criteria';
+import { upsertRawJobSource, upsertJob, markJobsInactive } from '@/lib/db/queries/jobs';
 import { getJobQueue } from '../index';
 
 export const JOB_POLLER_QUEUE = 'poll-jobs-for-user';
@@ -81,7 +74,11 @@ export async function jobPollerHandler(jobs: Job<PollJobsPayload>[]) {
       const canonical = adapter.normalizeJob(rawJob);
 
       // c. Upsert canonical job
-      const { job: canonicalJob, isNew, isUpdated } = await upsertJob({
+      const {
+        job: canonicalJob,
+        isNew,
+        isUpdated,
+      } = await upsertJob({
         source: canonical.sourceName,
         sourceJobId: canonical.sourceId,
         title: canonical.title,
@@ -119,6 +116,7 @@ export async function jobPollerHandler(jobs: Job<PollJobsPayload>[]) {
 
   // 6. Mark missing jobs as inactive
   // For each company in criteria, get active job IDs from adapter and mark missing as inactive
+  // CRITICAL: Must pass company name to scope the inactive marking to that company only
   for (const companyName of criteria.targetCompanies) {
     try {
       // Greenhouse uses lowercase company names as board tokens
@@ -126,7 +124,15 @@ export async function jobPollerHandler(jobs: Job<PollJobsPayload>[]) {
       const activeJobIds = await adapter.getActiveJobIds(boardToken);
 
       if (activeJobIds.length > 0) {
-        const markedInactive = await markJobsInactive('greenhouse', activeJobIds);
+        // Normalize company name to match how it's stored in database
+        // Database stores capitalized company names (e.g., "Airbnb", "Stripe")
+        const normalizedCompanyName =
+          companyName.charAt(0).toUpperCase() + companyName.slice(1).toLowerCase();
+        const markedInactive = await markJobsInactive(
+          'greenhouse',
+          normalizedCompanyName,
+          activeJobIds
+        );
         if (markedInactive > 0) {
           console.log(`[JobPoller] Marked ${markedInactive} jobs inactive for ${companyName}`);
         }

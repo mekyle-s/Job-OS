@@ -221,7 +221,9 @@ export async function getJobsForUser(
 /**
  * Get single job with all requirements
  */
-export async function getJobWithRequirements(jobId: string): Promise<JobWithRequirements | undefined> {
+export async function getJobWithRequirements(
+  jobId: string
+): Promise<JobWithRequirements | undefined> {
   const [jobRecord] = await db.select().from(job).where(eq(job.id, jobId)).limit(1);
 
   if (!jobRecord) {
@@ -270,9 +272,13 @@ export async function updateJobParseStatus(
 
 /**
  * Mark jobs not in latest fetch as inactive (per research Pitfall 4)
+ *
+ * IMPORTANT: Must filter by company to prevent marking jobs from other companies as inactive.
+ * When polling multiple companies, each company's poll should only affect that company's jobs.
  */
 export async function markJobsInactive(
   source: string,
+  company: string,
   activeSourceJobIds: string[]
 ): Promise<number> {
   const result = await db
@@ -281,6 +287,7 @@ export async function markJobsInactive(
     .where(
       and(
         eq(job.source, source),
+        eq(job.company, company),
         notInArray(job.sourceJobId, activeSourceJobIds),
         eq(job.isActive, true)
       )
