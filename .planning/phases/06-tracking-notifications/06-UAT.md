@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 06-tracking-notifications
 source:
   - 06-01-SUMMARY.md
@@ -79,5 +79,13 @@ skipped: 0
   reason: "User reported: the tiers are \"ignore\", \"save\", \"apply\", Applied\", and \"All\" the only tier that is showing things are the \"All tier\" the rest are empty but in the url it shows things like \"=save\" accordingly"
   severity: major
   test: 2
-  artifacts: []
-  missing: []
+  root_cause: "Filter logic performs strict equality check (roleStatus?.status === statusFilter) which fails for newly matched roles that have status = null by default. null !== 'save' causes all unstatused roles to be filtered out."
+  artifacts:
+  - path: "src/app/dashboard/queue/page.tsx"
+    issue: "shouldShow() function (lines 148-159) doesn't handle null status"
+  - path: "src/lib/hooks/use-role-status.ts"
+    issue: "Returns null status for untracked roles (line 27) - correct behavior but not handled by filter"
+    missing:
+  - "Add logic to handle null-status roles in filter (show in 'all' or add 'unreviewed' filter)"
+  - "Update shouldShow() to treat null status appropriately for each filter type"
+    debug_session: ".planning/debug/queue-filter-empty-results.md"
