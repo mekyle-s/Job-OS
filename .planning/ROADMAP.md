@@ -135,7 +135,7 @@ Plans:
 3. User can export proof summary for a specific role
 4. User receives email alert when new high-fit role appears in queue
 5. System logs parser confidence and user corrections for audit
-   **Plans**: 4 plans in 3 waves
+   **Plans**: 5 plans in 3 waves
 
 Plans:
 
@@ -143,17 +143,18 @@ Plans:
 - [x] 06-02-PLAN.md — Role status API routes, React Email template, notification worker, cron endpoint
 - [x] 06-03-PLAN.md — Queue status filters (nuqs), role card status buttons, print-optimized export page
 - [x] 06-04-PLAN.md — Fix queue status filter logic for null/loading status handling (gap closure)
+- [ ] 06-05-PLAN.md — Fix queue cache eviction by extending gcTime and adding background polling (gap closure)
 
 ## Progress
 
 **Execution Order:**
 Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
-| Phase                       | Plans Complete | Status     | Completed  |
-| --------------------------- | -------------- | ---------- | ---------- |
-| 1. Foundation Setup         | 2/2            | ✓ Complete | 2026-03-09 |
-| 2. Authentication           | 2/2            | ✓ Complete | 2026-03-09 |
-| 3. Evidence Foundation      | 4/4            | ✓ Complete | 2026-03-12 |
-| 4. Job Data Pipeline        | 5/5            | ✓ Complete | 2026-03-14 |
-| 5. Matching Core            | 4/4            | ✓ Complete | 2026-03-30 |
-| 6. Tracking & Notifications | 4/4            | ✓ Complete | 2026-04-06 |
+| Phase                       | Plans Complete | Status      | Completed  |
+| --------------------------- | -------------- | ----------- | ---------- |
+| 1. Foundation Setup         | 2/2            | ✓ Complete  | 2026-03-09 |
+| 2. Authentication           | 2/2            | ✓ Complete  | 2026-03-09 |
+| 3. Evidence Foundation      | 4/4            | ✓ Complete  | 2026-03-12 |
+| 4. Job Data Pipeline        | 5/5            | ✓ Complete  | 2026-03-14 |
+| 5. Matching Core            | 4/4            | ✓ Complete  | 2026-03-30 |
+| 6. Tracking & Notifications | 4/5            | In Progress | 2026-04-06 |
