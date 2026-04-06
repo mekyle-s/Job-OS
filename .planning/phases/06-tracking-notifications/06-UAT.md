@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 06-tracking-notifications
 source:
   - 06-01-SUMMARY.md
@@ -80,7 +80,13 @@ skipped: 0
   reason: "User reported: pass however this is a more of a holistic problem: after a couple minutes the whole list disappears and i have to trigger the poll again and again however when trigger the same poll again and going back to fresh match queue the role cards that i marked are still marked/saved"
   severity: major
   test: 4
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Default gcTime (5 minutes) causes TanStack Query to garbage collect queue cache after 5 minutes of component inactivity. When users navigate away from Fresh Match Queue page, component unmounts and gcTime countdown begins. Returning after 5 minutes shows empty cache."
+  artifacts:
+  - path: "src/lib/hooks/use-match-queue.ts"
+    issue: "Missing gcTime configuration, uses default 5-minute garbage collection"
+  - path: "src/app/providers.tsx"
+    issue: "Global QueryClient defaults don't specify gcTime"
+    missing:
+  - "Increase gcTime for queue query to 30 minutes or Infinity in useMatchQueue hook"
+  - "Optional: Add refetchInterval for automatic background polling"
+    debug_session: ".planning/debug/queue-data-disappears-after-minutes.md"
