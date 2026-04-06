@@ -146,11 +146,14 @@ function FilteredQueueList({ queue, statusFilter }: { queue: RankedJob[]; status
  * Wrapper that fetches status and conditionally renders the card.
  */
 function RoleCardWithFilter({ job, statusFilter }: { job: RankedJob; statusFilter: string }) {
-  const { data: roleStatus } = useRoleStatus(job.jobId);
+  const { data: roleStatus, isLoading } = useRoleStatus(job.jobId);
 
   // Determine if this card should be visible based on filter
   const shouldShow = () => {
     if (statusFilter === 'all') return true;
+    // Show card while loading to avoid flash-of-empty
+    if (isLoading) return true;
+    // Once loaded, compare actual status to filter
     return roleStatus?.status === statusFilter;
   };
 
