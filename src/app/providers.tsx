@@ -10,6 +10,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         defaultOptions: {
           queries: {
             staleTime: 1000 * 60 * 5, // 5 minutes
+            gcTime: 1000 * 60 * 30, // 30 minutes - global default prevents premature cache eviction
             refetchOnWindowFocus: true,
           },
         },

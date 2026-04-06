@@ -16,5 +16,7 @@ export function useMatchQueue() {
       return res.json();
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 30, // 30 minutes - prevents cache GC during navigation
+    refetchInterval: 1000 * 60 * 10, // 10 minutes - background polling keeps data fresh
   });
 }

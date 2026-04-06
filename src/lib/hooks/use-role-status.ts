@@ -31,6 +31,7 @@ export function useRoleStatus(jobId: string) {
       return res.json() as Promise<RoleStatus>;
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 30, // 30 minutes - match queue hook cache lifetime
   });
 }
 
