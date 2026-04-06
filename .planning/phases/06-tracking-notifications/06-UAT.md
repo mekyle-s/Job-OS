@@ -1,12 +1,12 @@
 ---
-status: diagnosed
+status: complete
 phase: 06-tracking-notifications
 source:
   - 06-01-SUMMARY.md
   - 06-02-SUMMARY.md
   - 06-03-SUMMARY.md
 started: 2026-04-06T00:00:00Z
-updated: 2026-04-06T00:10:00Z
+updated: 2026-04-06T20:15:00Z
 ---
 
 ## Current Test
@@ -23,9 +23,8 @@ result: pass
 ### 2. Filter Queue by Status
 
 expected: Click "Saved" filter - URL updates to include ?status=save parameter and queue shows only roles marked as Saved. Other roles are hidden.
-result: issue
-reported: "the tiers are \"ignore\", \"save\", \"apply\", Applied\", and \"All\" the only tier that is showing things are the \"All tier\" the rest are empty but in the url it shows things like \"=save\" accordingly"
-severity: major
+result: pass
+note: "Filters were empty because no roles had been tagged yet - working as intended"
 
 ### 3. Mark Role Status from Card
 
@@ -35,8 +34,10 @@ result: pass
 ### 4. Status Persists After Refresh
 
 expected: After marking a role with a status, refresh the page. The role card should still show the marked status (not reset to default).
-result: pass
-note: "User observed: roles disappear from queue after a couple minutes, requiring manual poll trigger. However, marked statuses persist correctly across polls - this is a separate queue refresh issue."
+result: issue
+reported: "pass however this is a more of a holistic problem: after a couple minutes the whole list disappears and i have to trigger the poll again and again however when trigger the same poll again and going back to fresh match queue the role cards that i marked are still marked/saved"
+severity: major
+note: "Status persistence works correctly - the issue is that roles disappear from queue after a couple minutes, requiring manual poll retrigger in Browse Jobs page"
 
 ### 5. Access Export Page from Role Brief
 
@@ -74,18 +75,12 @@ skipped: 0
 
 ## Gaps
 
-- truth: "Queue filters show only matching roles when status filter is selected"
+- truth: "Queue data persists and remains visible without manual intervention"
   status: failed
-  reason: "User reported: the tiers are \"ignore\", \"save\", \"apply\", Applied\", and \"All\" the only tier that is showing things are the \"All tier\" the rest are empty but in the url it shows things like \"=save\" accordingly"
+  reason: "User reported: pass however this is a more of a holistic problem: after a couple minutes the whole list disappears and i have to trigger the poll again and again however when trigger the same poll again and going back to fresh match queue the role cards that i marked are still marked/saved"
   severity: major
-  test: 2
-  root_cause: "Filter logic performs strict equality check (roleStatus?.status === statusFilter) which fails for newly matched roles that have status = null by default. null !== 'save' causes all unstatused roles to be filtered out."
-  artifacts:
-  - path: "src/app/dashboard/queue/page.tsx"
-    issue: "shouldShow() function (lines 148-159) doesn't handle null status"
-  - path: "src/lib/hooks/use-role-status.ts"
-    issue: "Returns null status for untracked roles (line 27) - correct behavior but not handled by filter"
-    missing:
-  - "Add logic to handle null-status roles in filter (show in 'all' or add 'unreviewed' filter)"
-  - "Update shouldShow() to treat null status appropriately for each filter type"
-    debug_session: ".planning/debug/queue-filter-empty-results.md"
+  test: 4
+  root_cause: ""
+  artifacts: []
+  missing: []
+  debug_session: ""
