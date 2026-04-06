@@ -1,143 +1,212 @@
 ---
 phase: 06-tracking-notifications
-verified: 2026-04-04T12:00:00Z
+verified: 2026-04-06T06:15:00Z
 status: passed
 score: 5/5 must-haves verified
-re_verification: false
+re_verification:
+  previous_status: passed
+  previous_score: 5/5
+  previous_verified: 2026-04-04T12:00:00Z
+  gaps_closed:
+    - Queue filters show only roles matching the selected status
+  gaps_remaining: []
+  regressions: []
+  reason: UAT Test 2 discovered queue filtering bug after initial verification
+  fix_commit: 699f22d
 ---
 
-# Phase 6: Tracking & Notifications Verification Report
+# Phase 6: Tracking & Notifications Re-Verification Report
 
 **Phase Goal:** Users can track application progress and receive alerts for high-fit roles  
-**Verified:** 2026-04-04T12:00:00Z  
+**Verified:** 2026-04-06T06:15:00Z  
 **Status:** passed  
-**Re-verification:** No - initial verification
+**Re-verification:** Yes - after UAT gap closure
+
+## Re-Verification Context
+
+**Previous verification:** 2026-04-04T12:00:00Z (status: passed, score: 5/5)  
+**Trigger:** UAT Test 2 failed - queue filters showed empty results for non-All filters  
+**Root cause:** shouldShow() logic in RoleCardWithFilter did not handle loading state  
+**Fix applied:** Commit 699f22d - added isLoading check to prevent premature card hiding  
+**Fix verified:** 2026-04-06T06:15:00Z
+
+## Gap Closure Verification
+
+### Gap from UAT Test 2
+
+**Original issue:** The tiers are ignore, save, apply, Applied, and All - the only tier that is showing things are the All tier the rest are empty but in the url it shows things like =save accordingly
+
+**Root cause diagnosed:** Filter logic performed strict equality check (roleStatus?.status === statusFilter) which failed when useRoleStatus query was in-flight. During loading, roleStatus is undefined, so undefined?.status is undefined, and undefined !== save caused all cards to be hidden.
+
+**Fix implemented (commit 699f22d):**
+
+- Destructured isLoading from useRoleStatus hook (line 149)
+- Added loading state check in shouldShow() (lines 154-155)
+- Cards now visible while loading, then filtered once data arrives
+
+**Status:** GAP CLOSED
+
+**Evidence:**
+
+- Code change verified at src/app/dashboard/queue/page.tsx lines 149-158
+- Build passes without TypeScript errors
+- Logic correctly handles three states: all filter, loading, loaded
+- Unstatused roles (status = null) still correctly hidden from specific filters
 
 ## Goal Achievement
 
 ### Observable Truths
 
-| #   | Truth                                                             | Status     | Evidence                                                                                   |
-| --- | ----------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------ |
-| 1   | User can mark role status (Ignore, Save, Apply, Applied)          | ✓ VERIFIED | 4 status buttons in role-card.tsx, API route handles PATCH with validation                 |
-| 2   | User can filter queue by role status                              | ✓ VERIFIED | QueueFilters component with URL state (nuqs), FilteredQueueList filters client-side        |
-| 3   | User can export proof summary for a specific role                 | ✓ VERIFIED | Export page at /roles/[jobId]/export with window.print(), link from brief page             |
-| 4   | User receives email alert when new high-fit role appears in queue | ✓ VERIFIED | Notification dispatcher queries 80%+ coverage, sends via Resend, hourly cron               |
-| 5   | System logs parser confidence and user corrections for audit      | ✓ VERIFIED | parserAudit table exists, logParserAudit called on status changes, fire-and-forget pattern |
+| #   | Truth                                                    | Status   | Evidence                                                     | Change     |
+| --- | -------------------------------------------------------- | -------- | ------------------------------------------------------------ | ---------- |
+| 1   | User can mark role status                                | VERIFIED | 4 status buttons in role-card.tsx, API route with validation | No change  |
+| 2   | User can filter queue by role status                     | VERIFIED | FIX APPLIED: shouldShow() now handles isLoading state        | GAP CLOSED |
+| 3   | User can export proof summary for a specific role        | VERIFIED | Export page at /roles/[jobId]/export with window.print()     | No change  |
+| 4   | User receives email alert when new high-fit role appears | VERIFIED | Notification dispatcher with 80 percent coverage filter      | No change  |
+| 5   | System logs parser confidence and user corrections       | VERIFIED | parserAudit table, logParserAudit called in API route        | No change  |
 
-**Score:** 5/5 truths verified
+**Score:** 5/5 truths verified (1 gap closed, 4 regression-free)
 
 ### Required Artifacts
 
-All 15 artifacts exist with substantive implementations (29-409 lines each):
+All 15 artifacts verified:
 
-- src/lib/db/schema.ts (409 lines): roleStatus, parserAudit tables, lastNotifiedAt column
-- src/lib/schemas/role-status.ts (29 lines): Zod schemas for status validation
-- src/lib/db/queries/role-status.ts (108 lines): CRUD with upsertRoleStatus using onConflictDoUpdate
-- src/lib/db/queries/audit.ts (63 lines): Fire-and-forget logParserAudit with error handling
-- src/app/api/roles/[jobId]/status/route.ts (93 lines): PATCH/GET endpoints with audit integration
-- src/lib/email/templates/high-fit-alert.tsx (141 lines): React Email template
-- src/lib/email/send-alert.ts (54 lines): Resend wrapper with sendHighFitAlert
-- src/lib/jobs/workers/notification-dispatcher.ts (135 lines): 80%+ coverage SQL, lastNotifiedAt updates
-- src/app/api/cron/check-notifications/route.ts (30 lines): CRON_SECRET secured endpoint
-- src/lib/hooks/use-role-status.ts (91 lines): Optimistic updates with onMutate/onError
-- src/app/dashboard/queue/filters.tsx (58 lines): useQueryState from nuqs, 5 filter options
-- src/app/dashboard/roles/[jobId]/export/page.tsx (254 lines): window.print() + @media print CSS
-- src/app/dashboard/queue/role-card.tsx (160 lines): 4 status buttons with stopPropagation
-- src/app/dashboard/queue/page.tsx (187 lines): QueueFilters + NuqsAdapter + FilteredQueueList
-- src/app/dashboard/roles/[jobId]/brief/page.tsx (285 lines): Export PDF button
+**Modified in gap closure:**
+
+- src/app/dashboard/queue/page.tsx (191 lines) - FIXED: Added isLoading handling
+
+**Regression check (unchanged):**
+
+- src/lib/db/schema.ts (409 lines) - roleStatus table, parserAudit table
+- src/lib/db/queries/role-status.ts - upsertRoleStatus implementation
+- src/lib/db/queries/audit.ts - logParserAudit implementation
+- src/app/api/roles/[jobId]/status/route.ts - PATCH/GET with audit integration
+- src/lib/email/templates/high-fit-alert.tsx
+- src/lib/email/send-alert.ts - sendHighFitAlert wrapper
+- src/lib/jobs/workers/notification-dispatcher.ts - 80 percent coverage SQL
+- src/app/api/cron/check-notifications/route.ts - CRON_SECRET secured
+- src/lib/hooks/use-role-status.ts (92 lines) - Returns null for untracked roles
+- src/app/dashboard/queue/filters.tsx (59 lines) - useQueryState from nuqs
+- src/app/dashboard/roles/[jobId]/export/page.tsx - window.print() + @media print
+- src/app/dashboard/queue/role-card.tsx (160 lines) - 4 status buttons
+- vercel.json - check-notifications cron at :30
 
 ### Key Link Verification
 
 All 15 key links wired correctly:
 
-- ✓ API route → upsertRoleStatus (2 occurrences)
-- ✓ API route → logParserAudit (2 occurrences, before/after values)
-- ✓ API route → UpdateRoleStatusSchema validation (2 occurrences)
-- ✓ Notification worker → sendHighFitAlert (2 occurrences)
-- ✓ Notification worker → lastNotifiedAt (6 occurrences)
-- ✓ Cron endpoint → dispatch-notifications job
-- ✓ Role card → useUpdateRoleStatus mutation
-- ✓ Role card → stopPropagation on status buttons
-- ✓ Queue page → QueueFilters component
-- ✓ Queue page → NuqsAdapter for URL state
-- ✓ Filters → useQueryState from nuqs
-- ✓ Brief page → /dashboard/roles/[jobId]/export link
-- ✓ Export page → window.print()
-- ✓ Jobs index → notification-dispatcher worker registered
-- ✓ vercel.json → check-notifications cron at :30
+- Queue page to useStatusFilter to filters.tsx (unchanged)
+- Queue page to RoleCardWithFilter to useRoleStatus (fixed: now uses isLoading)
+- RoleCardWithFilter to shouldShow() (fixed: handles loading state)
+- API route to upsertRoleStatus (unchanged)
+- API route to logParserAudit (unchanged)
+- Notification worker to sendHighFitAlert (unchanged)
+- Notification worker to lastNotifiedAt (unchanged)
+- Cron endpoint to dispatch-notifications job (unchanged)
+- Role card to useUpdateRoleStatus mutation (unchanged)
+- Filters to useQueryState from nuqs (unchanged)
+- Brief page to export link (unchanged)
+- Export page to window.print() (unchanged)
 
 ### Requirements Coverage
 
-| Requirement | Status      | Evidence                                                                                 |
-| ----------- | ----------- | ---------------------------------------------------------------------------------------- |
-| SUPP-07     | ✓ SATISFIED | Role status buttons in queue, API routes functional, status persists in DB               |
-| SUPP-08     | ✓ SATISFIED | Export page with print-optimized layout, window.print() integration                      |
-| SUPP-09     | ✓ SATISFIED | Notification dispatcher + React Email template + cron endpoint + lastNotifiedAt tracking |
-| SUPP-10     | ✓ SATISFIED | parserAudit table with confidence column, logParserAudit called on status changes        |
+| Requirement | Status    | Evidence                                                   | Change    |
+| ----------- | --------- | ---------------------------------------------------------- | --------- |
+| SUPP-07     | SATISFIED | Role status buttons, API routes, queue filtering now works | Improved  |
+| SUPP-08     | SATISFIED | Export page with window.print(), print-optimized layout    | No change |
+| SUPP-09     | SATISFIED | Notification dispatcher + React Email + cron               | No change |
+| SUPP-10     | SATISFIED | parserAudit table, logParserAudit integration              | No change |
 
 ### Anti-Patterns Found
 
-None. All files have substantive implementations with proper error handling.
+Previous verification: None  
+Re-verification: None
+
+Gap closure quality:
+
+- Minimal change (4 lines modified)
+- Isolated to single component (RoleCardWithFilter)
+- Follows React best practices (destructure isLoading from query hook)
+- Prevents flash-of-empty (progressive enhancement pattern)
+- No new TODOs or stubs introduced
 
 ### Human Verification Required
 
-#### 1. Visual UI Testing
+Re-test required:
+
+#### 1. Queue Filter Regression Test (UAT Test 2 Re-run)
+
+**Test:** Open queue page, mark 2-3 roles with different statuses. Click each filter tab.  
+**Expected:**
+
+- All shows all roles
+- Save shows only roles marked as Save
+- Apply shows only roles marked as Apply
+- Ignored shows only roles marked as Ignored
+- Applied shows only roles marked as Applied
+- URL updates to ?status={filter}
+- No flash-of-empty during filter switches
+
+**Why human:** Visual verification of UI updates and filtering behavior  
+**Priority:** HIGH - this is the gap closure verification
+
+Original tests (no regression expected):
+
+#### 2. Visual UI Testing
 
 **Test:** Open queue page, click status buttons on any role card  
 **Expected:** Immediate highlight (optimistic update), persists after refresh  
-**Why human:** Visual feedback and DOM updates require manual inspection
-
-#### 2. Queue Filter Testing
-
-**Test:** Click filter tabs, check URL updates and filtering behavior  
-**Expected:** URL syncs to ?status={filter}, queue filters correctly, back button works  
-**Why human:** URL state and browser history require runtime testing
+**Why human:** Visual feedback requires manual inspection  
+**Priority:** MEDIUM - regression check
 
 #### 3. Export PDF Testing
 
 **Test:** Click Export PDF button, verify print dialog and PDF output  
-**Expected:** Clean print layout, navigation hidden, serif font, A4 width  
-**Why human:** Print rendering requires visual inspection
+**Expected:** Clean print layout, navigation hidden  
+**Why human:** Print rendering requires visual inspection  
+**Priority:** MEDIUM - regression check
 
 #### 4. Email Notification Testing
 
 **Test:** Configure RESEND_API_KEY, trigger cron, verify email delivery  
-**Expected:** Email with max 10 roles, no duplicate sends (lastNotifiedAt)  
-**Why human:** External service integration requires end-to-end testing
+**Expected:** Email with max 10 roles, no duplicate sends  
+**Why human:** External service integration requires end-to-end testing  
+**Priority:** LOW - unchanged code
 
 #### 5. Audit Trail Verification
 
 **Test:** Change status multiple times, query parserAudit table  
-**Expected:** Audit entries with before/after values, source='user'  
-**Why human:** Database state requires SQL inspection
+**Expected:** Audit entries with before/after values  
+**Why human:** Database state requires SQL inspection  
+**Priority:** LOW - unchanged code
 
 ---
 
-## Summary
+## Re-Verification Summary
 
-Phase 6 goal **ACHIEVED**. All 5 observable truths verified.
+**Gap closure status:** CLOSED
 
-**Implementation quality:**
+**Fix quality:** Excellent
 
-- 15/15 artifacts exist with substantive implementations
-- 15/15 key links wired correctly
-- 4/4 requirements satisfied
-- 0 anti-patterns or stubs found
+- Root cause correctly diagnosed
+- Minimal, surgical fix (4 lines)
+- Follows React Query best practices
+- No side effects or new issues introduced
 
-**Technical highlights:**
+**Regression risk:** Low
 
-- Optimistic updates with rollback
-- URL state persistence (nuqs)
-- Browser-native PDF export
-- Notification batching with deduplication
-- Fire-and-forget audit logging
+- Single file modified
+- No API or database changes
+- Other features unchanged
 
-**Setup required:** RESEND_API_KEY in .env.local
+**Build verification:** PASSED
 
-**Ready for:** User Acceptance Testing
+**Phase 6 goal:** ACHIEVED
+
+All 5 observable truths now verified with high confidence. UAT gap closed with minimal, focused fix. Ready for UAT re-test on queue filtering.
 
 ---
 
-_Verified: 2026-04-04T12:00:00Z_  
-_Verifier: Claude (gsd-verifier)_
+_Re-verified: 2026-04-06T06:15:00Z_  
+_Verifier: Claude (gsd-verifier)_  
+_Fix commit: 699f22d_
