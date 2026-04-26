@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
-import { job, requirement, evidenceMapping, userCriteria } from '@/lib/db/schema';
-import { eq, and, sql, desc, inArray } from 'drizzle-orm';
+import { job, requirement, evidenceMapping } from '@/lib/db/schema';
+import { eq, and, sql, desc } from 'drizzle-orm';
 import { determineFitBand, type FitBand } from '@/lib/schemas/matching';
 
 /**
@@ -46,27 +46,8 @@ export function calculateFreshnessScore(daysOld: number): number {
  * @returns Array of ranked jobs sorted by composite score descending, limit 50
  */
 export async function getRankedJobs(userId: string): Promise<RankedJob[]> {
-  // Get user's active criteria to filter by target companies
-  const [activeCriteria] = await db
-    .select()
-    .from(userCriteria)
-    .where(and(eq(userCriteria.userId, userId), eq(userCriteria.isActive, true)))
-    .limit(1);
-
-  // If no active criteria or no target companies, return empty queue
-  if (
-    !activeCriteria ||
-    !activeCriteria.targetCompanies ||
-    activeCriteria.targetCompanies.length === 0
-  ) {
-    console.log('[Ranker] No active criteria or target companies found for user:', userId);
-    return [];
-  }
-
-  console.log('[Ranker] Filtering jobs by companies:', activeCriteria.targetCompanies);
-
   // SQL aggregation query:
-  // 1. Get active, parsed jobs matching user's target companies
+  // 1. Get active, parsed jobs
   // 2. Count total requirements and evidence-mapped requirements per job
   // 3. Calculate fit_score = mapped_requirements / total_requirements
   // 4. Calculate freshness_score using exponential decay on days since sourceUpdatedAt
@@ -89,22 +70,20 @@ export async function getRankedJobs(userId: string): Promise<RankedJob[]> {
     .leftJoin(requirement, eq(job.id, requirement.jobId))
     .leftJoin(
       evidenceMapping,
-      and(eq(evidenceMapping.requirementId, requirement.id), eq(evidenceMapping.userId, userId))
+      and(
+        eq(evidenceMapping.requirementId, requirement.id),
+        eq(evidenceMapping.userId, userId)
+      )
     )
     .where(
       and(
         eq(job.isActive, true),
-        eq(job.parseStatus, 'completed'),
-        inArray(job.company, activeCriteria.targetCompanies)
+        eq(job.parseStatus, 'completed')
       )
     )
     .groupBy(job.id)
     .having(sql`count(distinct ${requirement.id}) > 0`) // Only jobs with requirements
-    .orderBy(
-      desc(
-        sql`0.7 * (cast(count(distinct ${evidenceMapping.id}) as float) / cast(count(distinct ${requirement.id}) as float)) + 0.3 * exp(-0.1 * extract(epoch from (now() - ${job.sourceUpdatedAt})) / 86400)`
-      )
-    )
+    .orderBy(desc(sql`0.7 * (cast(count(distinct ${evidenceMapping.id}) as float) / cast(count(distinct ${requirement.id}) as float)) + 0.3 * exp(-0.1 * extract(epoch from (now() - ${job.sourceUpdatedAt})) / 86400)`))
     .limit(50);
 
   // Map to RankedJob type with fit bands and reasons
@@ -162,17 +141,11 @@ function generateFitReasons(
 
   // Reason 1: Coverage strength
   if (fitScore >= 0.8) {
-    reasons.push(
-      `Strong match: ${mappedRequirements} of ${totalRequirements} requirements covered`
-    );
+    reasons.push(`Strong match: ${mappedRequirements} of ${totalRequirements} requirements covered`);
   } else if (fitScore >= 0.5) {
-    reasons.push(
-      `Partial match: ${mappedRequirements} of ${totalRequirements} requirements covered`
-    );
+    reasons.push(`Partial match: ${mappedRequirements} of ${totalRequirements} requirements covered`);
   } else {
-    reasons.push(
-      `Limited match: Only ${mappedRequirements} of ${totalRequirements} requirements covered`
-    );
+    reasons.push(`Limited match: Only ${mappedRequirements} of ${totalRequirements} requirements covered`);
   }
 
   // Reason 2: Freshness
