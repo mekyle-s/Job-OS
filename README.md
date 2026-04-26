@@ -1,6 +1,6 @@
 # Internship OS: Proof Queue
 
-> A proof-first internship application platform that helps college students identify the best opportunities and prove they're qualified—requirement by requirement.
+> A proof-first internship application platform that helps college students identify the best opportunities and prove they're qualified - requirement by requirement.
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org/)
@@ -430,9 +430,9 @@ This project is licensed under the MIT License - see the [LICENSE](./LICENSE) fi
 
 ## 📧 Contact
 
-Built by **Mekyle** | [GitHub](https://github.com/mekyle-s) | [LinkedIn](https://linkedin.com/in/your-profile)
+Built by **Mekyle** | [GitHub](https://github.com/mekyle-s) | [LinkedIn](linkedin.com/in/m-siddiqi)
 
-_Looking for Summer 2026 internships in Software Engineering, Product, and Data!_
+_Looking for Summer 2026 internships in Data Engineering, Analytics, and AI/Agentic Development._
 
 ---
 
