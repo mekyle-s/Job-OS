@@ -235,26 +235,27 @@ npm run db:studio      # Open Drizzle Studio (DB GUI)
 
 ## 📸 Screenshots
 
-> **Note**: Screenshots coming soon. For now, here's what each feature looks like:
-
 ### Evidence Bank
 
-- Upload resume → AI parses into structured evidence
-- View all evidence items with confidence scores
-- Add manual entries for projects not in resume
+AI-powered resume parsing extracts structured evidence with confidence scores, including education, work experiences, and projects with technologies.
+
+![Evidence Bank](./screenshots/01-evidence-bank.png)
+
+---
 
 ### Fresh Match Queue
 
-- Ranked job cards with fit scores and coverage percentages
-- Filter by status (All / Save / Apply / Applied)
-- Freshness indicators (posted <24h, <7d, etc.)
+Ranked job opportunities by fit, freshness, and evidence coverage. Shows requirement gaps and fit scores at a glance.
+
+![Fresh Match Queue](./screenshots/02-match-queue.png)
+
+---
 
 ### Role Brief
 
-- Requirement-by-requirement breakdown
-- Each requirement mapped to supporting evidence
-- Gap indicators for unmapped requirements
-- Manual override controls
+Requirement-level evidence mapping showing gaps, requirement categories (experience, soft skills, education), and status indicators.
+
+![Role Brief](./screenshots/03-role-brief.png)
 
 ---
 
