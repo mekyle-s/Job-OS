@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            max-width: 8.5in;
+            margin: 0 auto;
+            padding: 0.5in;
+            line-height: 1.4;
+            color: #333;
+        }
+        h1 {
+            font-size: 28px;
+            margin: 0 0 5px 0;
+            color: #1a1a1a;
+        }
+        .contact {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+        h2 {
+            font-size: 14px;
+            text-transform: uppercase;
+            border-bottom: 2px solid #333;
+            margin: 15px 0 8px 0;
+            padding-bottom: 3px;
+            letter-spacing: 0.5px;
+        }
+        .section-item {
+            margin-bottom: 12px;
+        }
+        .job-header, .edu-header, .project-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 3px;
+        }
+        .job-title, .degree, .project-name {
+            font-weight: 600;
+            font-size: 12px;
+        }
+        .company, .school {
+            font-style: italic;
+            font-size: 11px;
+        }
+        .date {
+            font-size: 11px;
+            color: #666;
+        }
+        ul {
+            margin: 3px 0 0 0;
+            padding-left: 20px;
+        }
+        li {
+            font-size: 11px;
+            margin-bottom: 3px;
+        }
+        .skills-grid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 5px 15px;
+            font-size: 11px;
+        }
+        .skill-category {
+            font-weight: 600;
+        }
+        .tech-stack {
+            font-size: 10px;
+            color: #555;
+            font-style: italic;
+            margin-top: 2px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Alex Chen</h1>
+    <div class="contact">
+        alex.chen@email.com | (555) 123-4567 | linkedin.com/in/alexchen | github.com/alexchen | Austin, TX
+    </div>
+
+    <h2>Education</h2>
+    <div class="section-item">
+        <div class="edu-header">
+            <div>
+                <div class="degree">Bachelor of Science in Computer Science</div>
+                <div class="school">University of Texas at Austin</div>
+            </div>
+            <div class="date">Expected May 2026</div>
+        </div>
+        <ul>
+            <li>GPA: 3.7/4.0 | Dean's List (Fall 2024, Spring 2025)</li>
+            <li>Relevant Coursework: Data Structures, Algorithms, Database Systems, Machine Learning, Web Development</li>
+        </ul>
+    </div>
+
+    <h2>Experience</h2>
+    <div class="section-item">
+        <div class="job-header">
+            <div>
+                <div class="job-title">Software Engineering Intern</div>
+                <div class="company">TechCorp Solutions</div>
+            </div>
+            <div class="date">May 2025 – Aug 2025</div>
+        </div>
+        <ul>
+            <li>Developed RESTful API endpoints using Node.js and Express, serving 50,000+ daily active users</li>
+            <li>Optimized database queries with PostgreSQL indexes, reducing average query time by 40%</li>
+            <li>Implemented CI/CD pipeline using GitHub Actions, automating deployment to AWS EC2 instances</li>
+            <li>Collaborated with cross-functional team of 8 engineers using Agile methodologies and Git workflows</li>
+        </ul>
+        <div class="tech-stack">Tech: Node.js, Express, PostgreSQL, AWS, Docker, GitHub Actions</div>
+    </div>
+
+    <div class="section-item">
+        <div class="job-header">
+            <div>
+                <div class="job-title">Full Stack Developer (Part-time)</div>
+                <div class="company">Campus Startup Incubator</div>
+            </div>
+            <div class="date">Jan 2025 – Present</div>
+        </div>
+        <ul>
+            <li>Built responsive web applications using React and TypeScript, deployed to Vercel with 99.9% uptime</li>
+            <li>Designed and implemented user authentication system with JWT tokens and bcrypt password hashing</li>
+            <li>Integrated Stripe payment processing API, handling $15K+ in monthly transactions</li>
+        </ul>
+        <div class="tech-stack">Tech: React, TypeScript, Next.js, MongoDB, Stripe API, Vercel</div>
+    </div>
+
+    <h2>Projects</h2>
+    <div class="section-item">
+        <div class="project-header">
+            <div>
+                <div class="project-name">AI Study Buddy – Intelligent Flashcard Generator</div>
+            </div>
+            <div class="date">Sep 2025 – Dec 2025</div>
+        </div>
+        <ul>
+            <li>Built full-stack web app using Next.js and OpenAI GPT-4 API to generate personalized study flashcards from uploaded PDFs and lecture notes</li>
+            <li>Implemented vector embeddings with Pinecone for semantic search, enabling instant retrieval of relevant study materials</li>
+            <li>Deployed on Vercel with PostgreSQL database, serving 200+ active students with 95% positive feedback</li>
+            <li>Reduced study material preparation time by 60% based on user surveys</li>
+        </ul>
+        <div class="tech-stack">Tech: Next.js, TypeScript, OpenAI API, Pinecone, PostgreSQL, TailwindCSS</div>
+    </div>
+
+    <div class="section-item">
+        <div class="project-header">
+            <div>
+                <div class="project-name">Campus Event Finder – Mobile-First Web App</div>
+            </div>
+            <div class="date">Mar 2025 – May 2025</div>
+        </div>
+        <ul>
+            <li>Developed responsive event discovery platform using React and Firebase, aggregating 100+ campus events weekly</li>
+            <li>Implemented real-time updates with Firebase Realtime Database and user authentication with Firebase Auth</li>
+            <li>Built RESTful API with Node.js to scrape and normalize event data from 15+ campus organization websites</li>
+            <li>Achieved 500+ downloads in first month with 4.5/5 star rating</li>
+        </ul>
+        <div class="tech-stack">Tech: React, Node.js, Firebase, Cheerio (web scraping), Material-UI</div>
+    </div>
+
+    <div class="section-item">
+        <div class="project-header">
+            <div>
+                <div class="project-name">E-Commerce Price Tracker – Chrome Extension</div>
+            </div>
+            <div class="date">Jan 2025 – Feb 2025</div>
+        </div>
+        <ul>
+            <li>Created Chrome extension with 1,000+ active users to track Amazon and Walmart product prices</li>
+            <li>Built Python FastAPI backend with BeautifulSoup for web scraping, deployed on Railway</li>
+            <li>Implemented email notifications using SendGrid API when prices drop below user-defined thresholds</li>
+            <li>Saved users an average of $45 per month based on tracking data</li>
+        </ul>
+        <div class="tech-stack">Tech: JavaScript, Chrome Extension API, Python, FastAPI, BeautifulSoup, SendGrid</div>
+    </div>
+
+    <h2>Technical Skills</h2>
+    <div class="skills-grid">
+        <div class="skill-category">Languages:</div>
+        <div>Python, JavaScript, TypeScript, Java, C++, SQL, HTML/CSS</div>
+
+        <div class="skill-category">Frontend:</div>
+        <div>React, Next.js, Vue.js, TailwindCSS, Material-UI, Responsive Design</div>
+
+        <div class="skill-category">Backend:</div>
+        <div>Node.js, Express, FastAPI, Django, RESTful APIs, GraphQL</div>
+
+        <div class="skill-category">Databases:</div>
+        <div>PostgreSQL, MongoDB, MySQL, Firebase, Redis, Pinecone (vector DB)</div>
+
+        <div class="skill-category">DevOps/Tools:</div>
+        <div>Git, GitHub Actions, Docker, AWS (EC2, S3), Vercel, Railway, Linux</div>
+
+        <div class="skill-category">AI/ML:</div>
+        <div>OpenAI API, LangChain, Vector Embeddings, Prompt Engineering, RAG Systems</div>
+    </div>
+
+</body>
+</html>
