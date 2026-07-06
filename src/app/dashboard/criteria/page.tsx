@@ -186,17 +186,21 @@ export default function CriteriaPage() {
             {/* Job Function */}
             <div>
               <label htmlFor="jobFunction" className="block text-sm font-medium text-gray-700 mb-2">
-                Job Function
+                Job Functions
               </label>
               <input
                 type="text"
                 id="jobFunction"
                 value={formData.jobFunction}
                 onChange={(e) => setFormData({ ...formData, jobFunction: e.target.value })}
-                placeholder="All functions (Discover mode) — e.g., Software Engineering"
+                placeholder="e.g., AI Engineer, Solutions Engineer, Data Analyst"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <p className="text-sm text-gray-500 mt-1">Leave empty to discover every function</p>
+              <p className="text-sm text-gray-500 mt-1">
+                Separate multiple functions with commas. Matching is flexible — &ldquo;AI
+                Engineer&rdquo; also matches titles like &ldquo;Engineer, AI Platform&rdquo;. Leave
+                empty to discover every function.
+              </p>
             </div>
 
             {/* Job Types */}

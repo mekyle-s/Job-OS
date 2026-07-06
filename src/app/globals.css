@@ -25,3 +25,10 @@ body {
     text-wrap: balance;
   }
 }
+
+/* Placeholder text: the browser/Tailwind default is too faint on white inputs */
+input::placeholder,
+textarea::placeholder {
+  color: #6b7280; /* gray-500 */
+  opacity: 1; /* Firefox reduces placeholder opacity by default */
+}
