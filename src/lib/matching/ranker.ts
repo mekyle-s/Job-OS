@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { job, requirement, evidenceMapping, userCriteria } from '@/lib/db/schema';
-import { eq, and, or, isNull, inArray, sql, desc } from 'drizzle-orm';
+import { eq, ne, and, or, isNull, inArray, sql, desc } from 'drizzle-orm';
 import { determineFitBand, type FitBand } from '@/lib/schemas/matching';
 
 /**
@@ -105,7 +105,10 @@ export async function getRankedJobs(userId: string): Promise<RankedJob[]> {
       daysOld: sql<number>`extract(epoch from (now() - ${job.sourceUpdatedAt})) / 86400`,
     })
     .from(job)
-    .leftJoin(requirement, eq(job.id, requirement.jobId))
+    .leftJoin(
+      requirement,
+      and(eq(job.id, requirement.jobId), ne(requirement.reviewStatus, 'rejected'))
+    )
     .leftJoin(
       evidenceMapping,
       and(eq(evidenceMapping.requirementId, requirement.id), eq(evidenceMapping.userId, userId))

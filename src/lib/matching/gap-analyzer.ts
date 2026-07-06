@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { job, requirement, evidenceMapping, evidenceItem } from '@/lib/db/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, ne, and, sql } from 'drizzle-orm';
 import { determineFitBand, type FitBand } from '@/lib/schemas/matching';
 
 /**
@@ -62,11 +62,11 @@ export async function generateRoleBrief(jobId: string, userId: string): Promise<
     throw new Error(`Job ${jobId} not found`);
   }
 
-  // Get all requirements for job
+  // Get all requirements for job (excluding soft-rejected ones)
   const requirements = await db
     .select()
     .from(requirement)
-    .where(eq(requirement.jobId, jobId))
+    .where(and(eq(requirement.jobId, jobId), ne(requirement.reviewStatus, 'rejected')))
     .orderBy(
       sql`CASE ${requirement.priority}
         WHEN 'required' THEN 1
@@ -230,7 +230,9 @@ function generateFitReasons(
   const criticalGaps = gaps.filter((g) => g.priority === 'required');
   if (criticalGaps.length > 0) {
     const gapCategories = [...new Set(criticalGaps.map((g) => g.category))];
-    reasons.push(`Missing ${criticalGaps.length} required skills: ${gapCategories.slice(0, 2).join(', ')}`);
+    reasons.push(
+      `Missing ${criticalGaps.length} required skills: ${gapCategories.slice(0, 2).join(', ')}`
+    );
   }
 
   // Reason 3: Review needed

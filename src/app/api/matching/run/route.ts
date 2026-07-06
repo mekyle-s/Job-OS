@@ -44,6 +44,22 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Job not found' }, { status: 404 });
     }
 
+    // Cost guard: each run is capped, but this also throttles run frequency.
+    // Re-runs shortly after a match add nothing (validated pairs are cached),
+    // so reject them instead of burning API calls.
+    const COOLDOWN_MINUTES = 10;
+    if (jobRecord.lastMatchedAt) {
+      const ageMinutes = (Date.now() - jobRecord.lastMatchedAt.getTime()) / 60_000;
+      if (ageMinutes < COOLDOWN_MINUTES) {
+        return Response.json(
+          {
+            error: `Matching ran ${Math.ceil(ageMinutes)} minute(s) ago for this role. Try again in ${Math.ceil(COOLDOWN_MINUTES - ageMinutes)} minute(s).`,
+          },
+          { status: 429 }
+        );
+      }
+    }
+
     // Check job has requirements
     const requirements = await db.select().from(requirement).where(eq(requirement.jobId, jobId));
 

@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { requirement, requirementAudit } from '@/lib/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, ne, and, desc } from 'drizzle-orm';
 import type { InferSelectModel } from 'drizzle-orm';
 import type { ExtractedRequirement } from '@/lib/schemas/requirements';
 
@@ -44,10 +44,13 @@ export async function createRequirements(
 }
 
 /**
- * Get all requirements for a job
+ * Get all requirements for a job (excluding soft-rejected ones)
  */
 export async function getRequirementsForJob(jobId: string): Promise<Requirement[]> {
-  return db.select().from(requirement).where(eq(requirement.jobId, jobId));
+  return db
+    .select()
+    .from(requirement)
+    .where(and(eq(requirement.jobId, jobId), ne(requirement.reviewStatus, 'rejected')));
 }
 
 /**
@@ -123,7 +126,13 @@ export async function updateRequirement(
 }
 
 /**
- * Delete a requirement with audit trail
+ * Reject (soft-delete) a requirement with audit trail.
+ *
+ * Requirements are shared parse data across all users, so a hard DELETE
+ * would cascade away every user's evidence mappings for that requirement.
+ * Rejecting instead marks reviewStatus='rejected': the requirement is
+ * excluded from display, matching, and ranking, but the row (and audit
+ * history) survives and the action is reversible.
  */
 export async function deleteRequirement(requirementId: string, userId: string): Promise<void> {
   // Get current requirement for audit trail
@@ -137,14 +146,17 @@ export async function deleteRequirement(requirementId: string, userId: string): 
     throw new Error(`Requirement ${requirementId} not found`);
   }
 
-  // Execute delete and audit insert in transaction
   await db.transaction(async (tx) => {
-    // Create audit trail entry before deletion
+    await tx
+      .update(requirement)
+      .set({ reviewStatus: 'rejected', isManuallyEdited: true, updatedAt: new Date() })
+      .where(eq(requirement.id, requirementId));
+
     await tx.insert(requirementAudit).values({
       id: crypto.randomUUID(),
       requirementId,
       userId,
-      action: 'delete',
+      action: 'reject',
       beforeValue: {
         category: current.category,
         priority: current.priority,
@@ -153,11 +165,8 @@ export async function deleteRequirement(requirementId: string, userId: string): 
         sourceSpan: current.sourceSpan,
         reviewStatus: current.reviewStatus,
       },
-      afterValue: null,
+      afterValue: { reviewStatus: 'rejected' },
     });
-
-    // Delete requirement (cascade will handle related data)
-    await tx.delete(requirement).where(eq(requirement.id, requirementId));
   });
 }
 

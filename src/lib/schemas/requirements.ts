@@ -23,7 +23,12 @@ export const RequirementPrioritySchema = z.enum(['required', 'preferred', 'unkno
 /**
  * Requirement review status enum
  */
-export const RequirementReviewStatusSchema = z.enum(['parsed', 'needs_review', 'unparsed']);
+export const RequirementReviewStatusSchema = z.enum([
+  'parsed',
+  'needs_review',
+  'unparsed',
+  'rejected', // soft-deleted: excluded from display/matching, reversible
+]);
 
 // ============================================================
 // Extracted Requirement Schemas (for LLM output)

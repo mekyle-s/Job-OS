@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { job, requirement, evidenceItem, evidenceMapping } from '@/lib/db/schema';
-import { eq, and, isNotNull, inArray } from 'drizzle-orm';
+import { eq, ne, and, isNotNull, inArray } from 'drizzle-orm';
 import { generateBatchEmbeddings } from './embedder';
 import { findSimilarEvidence } from './similarity';
 import { validateEvidenceMatch } from './mapper';
@@ -66,7 +66,10 @@ export async function runMatchingForJob(jobId: string, userId: string): Promise<
     throw new Error(`Job ${jobId} not found`);
   }
 
-  const requirements = await db.select().from(requirement).where(eq(requirement.jobId, jobId));
+  const requirements = await db
+    .select()
+    .from(requirement)
+    .where(and(eq(requirement.jobId, jobId), ne(requirement.reviewStatus, 'rejected')));
 
   if (requirements.length === 0) {
     console.log(`[Matching Pipeline] Job ${jobId} has no requirements, skipping`);

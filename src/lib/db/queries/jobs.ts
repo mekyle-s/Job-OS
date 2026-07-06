@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { rawJobSource, job, requirement } from '@/lib/db/schema';
-import { eq, and, or, isNull, inArray, notInArray, desc, sql } from 'drizzle-orm';
+import { eq, ne, and, or, isNull, inArray, notInArray, desc, sql } from 'drizzle-orm';
 import type { InferSelectModel } from 'drizzle-orm';
 
 // ============================================================
@@ -222,7 +222,10 @@ export async function getJobsForUser(
       requirementCount: sql<number>`cast(count(${requirement.id}) as integer)`,
     })
     .from(job)
-    .leftJoin(requirement, eq(job.id, requirement.jobId))
+    .leftJoin(
+      requirement,
+      and(eq(job.id, requirement.jobId), ne(requirement.reviewStatus, 'rejected'))
+    )
     .where(and(...conditions))
     .groupBy(job.id)
     .orderBy(desc(job.sourceUpdatedAt))
@@ -273,7 +276,7 @@ export async function getJobWithRequirements(
   const requirements = await db
     .select()
     .from(requirement)
-    .where(eq(requirement.jobId, jobId))
+    .where(and(eq(requirement.jobId, jobId), ne(requirement.reviewStatus, 'rejected')))
     .orderBy(
       sql`CASE ${requirement.priority}
         WHEN 'required' THEN 1

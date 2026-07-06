@@ -44,7 +44,10 @@ export async function dispatchNotifications(): Promise<void> {
             mappedRequirements: sql<number>`COUNT(DISTINCT CASE WHEN ${evidenceMapping.decision} IN ('match', 'weak_match') THEN ${requirement.id} END)`,
           })
           .from(jobTable)
-          .innerJoin(requirement, eq(requirement.jobId, jobTable.id))
+          .innerJoin(
+            requirement,
+            and(eq(requirement.jobId, jobTable.id), sql`${requirement.reviewStatus} != 'rejected'`)
+          )
           .leftJoin(
             evidenceMapping,
             and(
