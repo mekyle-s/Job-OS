@@ -41,6 +41,9 @@ export interface CanonicalJob {
 export interface JobSource {
   name: string;
 
+  /** All company names this source can poll (used for "All companies" discover mode) */
+  getMonitoredCompanies(): string[];
+
   /** Fetch jobs matching user criteria from this source */
   fetchJobs(criteria: UserCriteriaInput): Promise<RawJobData[]>;
 

@@ -36,6 +36,7 @@ export async function upsertUserCriteria(
     locations?: string[];
     visaRequired?: boolean;
     targetCompanies: string[];
+    jobTypes?: string[];
   }
 ): Promise<UserCriteria> {
   // Check if user already has criteria
@@ -51,6 +52,7 @@ export async function upsertUserCriteria(
         locations: data.locations ?? null,
         visaRequired: data.visaRequired ?? null,
         targetCompanies: data.targetCompanies,
+        jobTypes: data.jobTypes ?? null,
         updatedAt: new Date(),
       })
       .where(eq(userCriteria.id, existing.id))
@@ -70,6 +72,7 @@ export async function upsertUserCriteria(
         locations: data.locations,
         visaRequired: data.visaRequired,
         targetCompanies: data.targetCompanies,
+        jobTypes: data.jobTypes,
         isActive: true,
       })
       .returning();

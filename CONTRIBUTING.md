@@ -1,4 +1,4 @@
-# Contributing to Internship OS
+# Contributing to Job OS
 
 First off, thanks for taking the time to look at this project! 🎉
 
@@ -21,11 +21,11 @@ If you find a bug in the code:
 Feature requests are welcome! Before opening an issue:
 
 1. Check the **Roadmap** section in README.md
-2. Consider if it aligns with the "proof-first internship application" mission
+2. Consider if it aligns with the "evidence-backed job discovery" mission
 3. Open an issue tagged `enhancement` with:
    - What problem it solves
    - How it fits the existing architecture
-   - Why it's valuable for the target user (college students applying to internships)
+   - Why it's valuable for job seekers (full-time, part-time, or internship)
 
 ## 🔧 Want to Contribute Code?
 
@@ -39,8 +39,8 @@ Feature requests are welcome! Before opening an issue:
 
 ```bash
 # Clone your fork
-git clone https://github.com/YOUR_USERNAME/Internship-OS.git
-cd Internship-OS
+git clone https://github.com/YOUR_USERNAME/Job-OS.git
+cd Job-OS
 
 # Install dependencies
 npm install
@@ -170,8 +170,8 @@ If your change requires schema modifications:
 To add a new job board adapter:
 
 1. Create `src/lib/jobs/sources/your-source.ts`
-2. Implement the `JobSourceAdapter` interface
-3. Export from `src/lib/jobs/sources/index.ts`
+2. Implement the `JobSource` interface (including `getMonitoredCompanies()` for discover mode)
+3. Register it in `src/lib/jobs/sources/index.ts`
 4. Update `job-poller.ts` worker to include new source
 5. Add source-specific configuration to user criteria
 
@@ -183,22 +183,18 @@ To add a new job board adapter:
 
 ## 🚫 Out of Scope
 
-The following are **intentionally excluded** from V1:
+The following are **intentionally excluded**:
 
 - One-click mass apply (destroys product quality)
-- Generic full-time job support (internship-only focus)
 - Social graph scraping
 - Live interview copilot
 - Generic cover letter generator
 
-See FINAL_PRD.md for the full rationale.
-
 ## ❓ Questions?
 
-Open an issue with the `question` label or reach out via:
+Open an issue with the `question` label:
 
-- GitHub Issues: https://github.com/mekyle-s/Internship-OS/issues
-- Email: [your-email]
+- GitHub Issues: https://github.com/mekyle-s/Job-OS/issues
 
 ## 📜 Code of Conduct
 

@@ -41,7 +41,9 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     return embedding;
   } catch (error) {
     console.error('Failed to generate embedding:', error);
-    throw new Error(`Embedding generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Embedding generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 }
 
@@ -84,15 +86,18 @@ export async function generateBatchEmbeddings(texts: string[]): Promise<number[]
     return allEmbeddings;
   } catch (error) {
     console.error('Failed to generate batch embeddings:', error);
-    throw new Error(`Batch embedding generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Batch embedding generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 }
 
 /**
- * Generate embedding from an evidence item by constructing text from multiple fields.
- * Combines title, content, and metadata (skills, technologies, achievements) into searchable text.
+ * Build the searchable text for an evidence item.
+ * Combines title, content, and metadata (skills, technologies, achievements).
+ * Shared by single and batch embedding generation.
  */
-export async function generateEvidenceEmbedding(item: {
+export function buildEvidenceEmbeddingText(item: {
   title: string;
   content?: string | null;
   company?: string | null;
@@ -102,8 +107,7 @@ export async function generateEvidenceEmbedding(item: {
     achievements?: string[];
     [key: string]: unknown;
   } | null;
-}): Promise<number[]> {
-  // Construct embedding text from evidence item fields
+}): string {
   const parts: string[] = [item.title];
 
   if (item.company) {
@@ -126,8 +130,24 @@ export async function generateEvidenceEmbedding(item: {
     }
   }
 
-  const embeddingText = parts.join(' | ');
-  return generateEmbedding(embeddingText);
+  return parts.join(' | ');
+}
+
+/**
+ * Generate embedding from an evidence item by constructing text from multiple fields.
+ */
+export async function generateEvidenceEmbedding(item: {
+  title: string;
+  content?: string | null;
+  company?: string | null;
+  metadata?: {
+    skills?: string[];
+    technologies?: string[];
+    achievements?: string[];
+    [key: string]: unknown;
+  } | null;
+}): Promise<number[]> {
+  return generateEmbedding(buildEvidenceEmbeddingText(item));
 }
 
 /**

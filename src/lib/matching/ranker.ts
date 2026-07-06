@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
-import { job, requirement, evidenceMapping } from '@/lib/db/schema';
-import { eq, and, sql, desc } from 'drizzle-orm';
+import { job, requirement, evidenceMapping, userCriteria } from '@/lib/db/schema';
+import { eq, and, or, isNull, inArray, sql, desc } from 'drizzle-orm';
 import { determineFitBand, type FitBand } from '@/lib/schemas/matching';
 
 /**
@@ -46,8 +46,46 @@ export function calculateFreshnessScore(daysOld: number): number {
  * @returns Array of ranked jobs sorted by composite score descending, limit 50
  */
 export async function getRankedJobs(userId: string): Promise<RankedJob[]> {
+  // Queue adheres to the user's active criteria (companies + job types).
+  // Empty targetCompanies = "All companies" (discover mode) — the strict
+  // company filter is skipped entirely. Company matching is case-insensitive:
+  // criteria store tokens like "stripe" while jobs store display names like
+  // "Stripe" (the exact-match version of this filter emptied the queue and
+  // was reverted in 2d21715).
+  const [activeCriteria] = await db
+    .select()
+    .from(userCriteria)
+    .where(and(eq(userCriteria.userId, userId), eq(userCriteria.isActive, true)))
+    .limit(1);
+
+  if (!activeCriteria) {
+    return [];
+  }
+
+  const jobConditions = [eq(job.isActive, true), eq(job.parseStatus, 'completed')];
+
+  if (activeCriteria.targetCompanies.length > 0) {
+    jobConditions.push(
+      inArray(
+        sql`lower(${job.company})`,
+        activeCriteria.targetCompanies.map((c) => c.toLowerCase())
+      )
+    );
+  }
+
+  // Job type filter: exclude explicit mismatches, keep unknown/unclassified jobs
+  if (activeCriteria.jobTypes && activeCriteria.jobTypes.length > 0) {
+    jobConditions.push(
+      or(
+        isNull(job.roleType),
+        eq(job.roleType, 'unknown'),
+        inArray(job.roleType, activeCriteria.jobTypes)
+      )!
+    );
+  }
+
   // SQL aggregation query:
-  // 1. Get active, parsed jobs
+  // 1. Get active, parsed jobs matching the user's criteria
   // 2. Count total requirements and evidence-mapped requirements per job
   // 3. Calculate fit_score = mapped_requirements / total_requirements
   // 4. Calculate freshness_score using exponential decay on days since sourceUpdatedAt
@@ -70,20 +108,16 @@ export async function getRankedJobs(userId: string): Promise<RankedJob[]> {
     .leftJoin(requirement, eq(job.id, requirement.jobId))
     .leftJoin(
       evidenceMapping,
-      and(
-        eq(evidenceMapping.requirementId, requirement.id),
-        eq(evidenceMapping.userId, userId)
-      )
+      and(eq(evidenceMapping.requirementId, requirement.id), eq(evidenceMapping.userId, userId))
     )
-    .where(
-      and(
-        eq(job.isActive, true),
-        eq(job.parseStatus, 'completed')
-      )
-    )
+    .where(and(...jobConditions))
     .groupBy(job.id)
     .having(sql`count(distinct ${requirement.id}) > 0`) // Only jobs with requirements
-    .orderBy(desc(sql`0.7 * (cast(count(distinct ${evidenceMapping.id}) as float) / cast(count(distinct ${requirement.id}) as float)) + 0.3 * exp(-0.1 * extract(epoch from (now() - ${job.sourceUpdatedAt})) / 86400)`))
+    .orderBy(
+      desc(
+        sql`0.7 * (cast(count(distinct ${evidenceMapping.id}) as float) / cast(count(distinct ${requirement.id}) as float)) + 0.3 * exp(-0.1 * extract(epoch from (now() - ${job.sourceUpdatedAt})) / 86400)`
+      )
+    )
     .limit(50);
 
   // Map to RankedJob type with fit bands and reasons
@@ -141,11 +175,17 @@ function generateFitReasons(
 
   // Reason 1: Coverage strength
   if (fitScore >= 0.8) {
-    reasons.push(`Strong match: ${mappedRequirements} of ${totalRequirements} requirements covered`);
+    reasons.push(
+      `Strong match: ${mappedRequirements} of ${totalRequirements} requirements covered`
+    );
   } else if (fitScore >= 0.5) {
-    reasons.push(`Partial match: ${mappedRequirements} of ${totalRequirements} requirements covered`);
+    reasons.push(
+      `Partial match: ${mappedRequirements} of ${totalRequirements} requirements covered`
+    );
   } else {
-    reasons.push(`Limited match: Only ${mappedRequirements} of ${totalRequirements} requirements covered`);
+    reasons.push(
+      `Limited match: Only ${mappedRequirements} of ${totalRequirements} requirements covered`
+    );
   }
 
   // Reason 2: Freshness

@@ -46,7 +46,7 @@ export function SignUpForm() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Create Account</h1>
-          <p className="text-gray-600 mt-2">Get started with Internship OS</p>
+          <p className="text-gray-600 mt-2">Get started with Job OS</p>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow-md space-y-4">

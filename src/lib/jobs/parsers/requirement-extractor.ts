@@ -25,46 +25,35 @@ function getOpenAIClient(): OpenAI {
  * @param jobDescription - Full job posting content (HTML will be stripped)
  * @returns Extracted requirements with conservative extraction
  */
+// Cap input tokens: requirements live in the first part of a posting; very long
+// descriptions (benefits, legal boilerplate) mostly add cost, not signal.
+const MAX_DESCRIPTION_CHARS = 16000;
+
 export async function extractRequirements(jobDescription: string): Promise<JobRequirements> {
   // Strip HTML tags and normalize whitespace
   const cleanText = jobDescription
     .replace(/<[^>]*>/g, ' ')
     .replace(/\s+/g, ' ')
-    .trim();
+    .trim()
+    .slice(0, MAX_DESCRIPTION_CHARS);
 
   const openai = getOpenAIClient();
 
   const completion = await openai.chat.completions.parse({
-    model: 'gpt-4o-2024-08-06',
+    // gpt-4o-mini: high-volume background extraction task; the conservative,
+    // verbatim-extraction prompt does not need a frontier model
+    model: 'gpt-4o-mini',
     messages: [
       {
         role: 'system',
-        content: `You are a conservative job requirement extractor. Extract ONLY explicitly stated requirements from job postings.
+        content: `You are a conservative job requirement extractor. Extract ONLY explicitly stated requirements from the job posting.
 
-CRITICAL RULES:
-1. NEVER infer or assume requirements not clearly stated
-2. If a requirement is ambiguous, mark priority as "unknown"
-3. Preserve verbatim source text exactly as written
-4. Categorize accurately: technical_skill, experience, education, soft_skill, other
-5. Detect priority from keywords:
-   - "required", "must have", "essential", "minimum" → required
-   - "preferred", "nice to have", "bonus", "plus", "ideally" → preferred
-   - No clear signal → unknown
-
-CATEGORIES:
-- technical_skill: Programming languages, frameworks, tools, technologies, platforms
-- experience: Years of experience, previous roles, domain knowledge
-- education: Degrees, certifications, courses, academic requirements
-- soft_skill: Communication, teamwork, leadership, problem-solving, collaboration
-- other: Anything else (visa status, availability, travel, clearance, etc.)
-
-CONSERVATIVE EXTRACTION EXAMPLES:
-✓ "3+ years of Python experience" → Extract (explicit)
-✓ "Bachelor's degree in Computer Science" → Extract (explicit)
-✗ "Experience building scalable systems" → Do NOT expand to "distributed systems"
-✗ "Strong communicator" → Extract as-is, do NOT expand to "written and verbal communication"
-
-When in doubt, extract less rather than more. Fewer false positives is better than comprehensive coverage.`,
+RULES:
+1. NEVER infer or expand requirements ("Strong communicator" stays as-is; "scalable systems" does not become "distributed systems").
+2. Preserve verbatim source text exactly as written.
+3. category: technical_skill (languages/frameworks/tools) | experience (years/roles/domain) | education (degrees/certifications) | soft_skill (communication/teamwork/leadership) | other (visa/availability/travel/clearance).
+4. priority: "required"/"must have"/"essential"/"minimum" → required; "preferred"/"nice to have"/"bonus"/"plus"/"ideally" → preferred; no clear signal → unknown.
+5. When in doubt, extract less rather than more — fewer false positives beats comprehensive coverage.`,
       },
       {
         role: 'user',

@@ -24,8 +24,10 @@ export function useMatchQueue() {
       });
       return data;
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 30, // 30 seconds - queue must reflect recent polls/criteria changes quickly
     gcTime: 1000 * 60 * 30, // 30 minutes - prevents cache GC during navigation
-    refetchInterval: 1000 * 60 * 10, // 10 minutes - background polling keeps data fresh
+    refetchInterval: 1000 * 60 * 5, // 5 minutes - background polling keeps data fresh
+    refetchOnMount: 'always', // returning to the queue after a poll always fetches fresh data
+    placeholderData: (previousData: unknown) => previousData, // keep last queue visible while refetching
   });
 }

@@ -31,6 +31,13 @@ export class GreenhouseAdapter implements JobSource {
   };
 
   /**
+   * All companies this adapter can poll (discover mode polls every board)
+   */
+  getMonitoredCompanies(): string[] {
+    return Object.keys(this.boardTokens);
+  }
+
+  /**
    * Fetch jobs matching user criteria
    *
    * Processes companies sequentially to avoid rate limits (per Pitfall 1)
@@ -199,11 +206,23 @@ export class GreenhouseAdapter implements JobSource {
   private detectEmploymentType(title: string): string {
     const lowerTitle = title.toLowerCase();
 
-    if (lowerTitle.includes('intern')) {
+    // "intern" as its own word (avoid matching "internal", "international")
+    if (
+      /\bintern(ship)?s?\b/.test(lowerTitle) ||
+      lowerTitle.includes('co-op') ||
+      lowerTitle.includes('coop')
+    ) {
       return 'internship';
     }
     if (lowerTitle.includes('part-time') || lowerTitle.includes('part time')) {
       return 'part-time';
+    }
+    if (
+      lowerTitle.includes('contract') ||
+      lowerTitle.includes('contractor') ||
+      lowerTitle.includes('temporary')
+    ) {
+      return 'contract';
     }
     return 'full-time';
   }

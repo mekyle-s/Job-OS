@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { rawJobSource, job, requirement } from '@/lib/db/schema';
-import { eq, and, inArray, notInArray, desc, sql } from 'drizzle-orm';
+import { eq, and, or, isNull, inArray, notInArray, desc, sql } from 'drizzle-orm';
 import type { InferSelectModel } from 'drizzle-orm';
 
 // ============================================================
@@ -80,6 +80,7 @@ export async function upsertJob(data: {
     visaSponsorship?: boolean;
     [key: string]: unknown;
   };
+  roleType?: string; // 'internship' | 'full_time' | 'part_time' | 'contract' | 'unknown'
   isActive?: boolean;
 }): Promise<{ job: Job; isNew: boolean; isUpdated: boolean }> {
   // Check if job exists
@@ -104,6 +105,7 @@ export async function upsertJob(data: {
         postedAt: data.postedAt,
         sourceUpdatedAt: data.sourceUpdatedAt,
         metadata: data.metadata,
+        roleType: data.roleType ?? existing.roleType,
         isActive: data.isActive ?? true,
         parseStatus: isUpdated ? 'pending' : existing.parseStatus,
       })
@@ -129,6 +131,7 @@ export async function upsertJob(data: {
         postedAt: data.postedAt,
         sourceUpdatedAt: data.sourceUpdatedAt,
         metadata: data.metadata,
+        roleType: data.roleType,
         isActive: data.isActive ?? true,
         parseStatus: 'pending',
       })
@@ -139,7 +142,10 @@ export async function upsertJob(data: {
 }
 
 /**
- * Get jobs for user's target companies
+ * Get jobs for user's target companies.
+ * Empty companies array = "All companies" (discover mode): no company filter.
+ * Company matching is case-insensitive so criteria tokens ("stripe") match
+ * stored company names ("Stripe").
  */
 export async function getJobsForUser(
   companies: string[],
@@ -147,11 +153,45 @@ export async function getJobsForUser(
     limit?: number;
     offset?: number;
     isActive?: boolean;
+    /** Restrict to specific job types; jobs with unknown role type pass through */
+    jobTypes?: string[];
+    /** Restrict to a single company */
+    company?: string;
   }
 ): Promise<JobWithCount[]> {
   const limit = options?.limit ?? 50;
   const offset = options?.offset ?? 0;
   const isActiveFilter = options?.isActive ?? true;
+
+  const conditions = [eq(job.isActive, isActiveFilter)];
+
+  // Case-insensitive company scope. A single-company filter narrows the
+  // target list, or stands alone in discover mode (no target list).
+  if (options?.company) {
+    const target = options.company.toLowerCase();
+    if (companies.length > 0 && !companies.some((c) => c.toLowerCase() === target)) {
+      return [];
+    }
+    conditions.push(eq(sql`lower(${job.company})`, target));
+  } else if (companies.length > 0) {
+    conditions.push(
+      inArray(
+        sql`lower(${job.company})`,
+        companies.map((c) => c.toLowerCase())
+      )
+    );
+  }
+
+  // Job type filter: exclude explicit mismatches, keep unknown/unclassified jobs
+  if (options?.jobTypes && options.jobTypes.length > 0) {
+    conditions.push(
+      or(
+        isNull(job.roleType),
+        eq(job.roleType, 'unknown'),
+        inArray(job.roleType, options.jobTypes)
+      )!
+    );
+  }
 
   // Build query with requirement count
   const jobsWithCounts = await db
@@ -183,7 +223,7 @@ export async function getJobsForUser(
     })
     .from(job)
     .leftJoin(requirement, eq(job.id, requirement.jobId))
-    .where(and(inArray(job.company, companies), eq(job.isActive, isActiveFilter)))
+    .where(and(...conditions))
     .groupBy(job.id)
     .orderBy(desc(job.sourceUpdatedAt))
     .limit(limit)
@@ -247,6 +287,22 @@ export async function getJobWithRequirements(
     ...jobRecord,
     requirements,
   };
+}
+
+/**
+ * Get jobs awaiting requirement extraction, freshest first.
+ * Used by the poller to drain the extraction backlog under a per-run cap
+ * (index-backed via job_parse_status_idx).
+ */
+export async function getPendingParseJobs(
+  limit: number
+): Promise<Array<{ id: string; description: string }>> {
+  return db
+    .select({ id: job.id, description: job.description })
+    .from(job)
+    .where(and(eq(job.parseStatus, 'pending'), eq(job.isActive, true)))
+    .orderBy(desc(job.sourceUpdatedAt))
+    .limit(limit);
 }
 
 /**

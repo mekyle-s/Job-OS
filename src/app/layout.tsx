@@ -14,8 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Internship OS',
-  description: 'Prove your fit, requirement by requirement',
+  title: 'Job OS',
+  description:
+    'Evidence-backed job discovery — prove your fit, requirement by requirement, for full-time, part-time, and internship roles',
 };
 
 export default function RootLayout({

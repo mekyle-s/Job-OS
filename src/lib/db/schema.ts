@@ -158,6 +158,9 @@ export const userCriteria = pgTable(
     locations: jsonb('locations').$type<string[]>(),
     visaRequired: boolean('visa_required'),
     targetCompanies: jsonb('target_companies').$type<string[]>().notNull(),
+    // Job types the user is looking for: 'full_time' | 'part_time' | 'internship' | 'contract'
+    // null or empty array = all job types
+    jobTypes: jsonb('job_types').$type<string[]>(),
     isActive: boolean('is_active').default(true).notNull(),
     lastPolledAt: timestamp('last_polled_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
@@ -228,6 +231,7 @@ export const job = pgTable(
     index('job_source_updated_at_idx').on(table.sourceUpdatedAt),
     index('job_parse_status_idx').on(table.parseStatus),
     index('job_is_active_idx').on(table.isActive),
+    index('job_role_type_idx').on(table.roleType),
   ]
 );
 

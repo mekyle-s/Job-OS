@@ -43,6 +43,13 @@
       "when": 1775283012766,
       "tag": "0005_careful_iceman",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1783340484381,
+      "tag": "0006_job_os_pivot",
+      "breakpoints": true
     }
   ]
 }

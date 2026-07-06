@@ -1,100 +1,86 @@
-# Internship OS: Proof Queue
+# Job OS: Evidence-Backed Job Discovery
 
-> A proof-first internship application platform that helps college students identify the best opportunities and prove they're qualified - requirement by requirement.
+> An AI-powered job discovery platform that ranks opportunities by **provable fit** — mapping every job requirement to concrete evidence from your background, for full-time, part-time, and internship roles.
 
+[![CI](https://github.com/mekyle-s/Job-OS/actions/workflows/ci.yml/badge.svg)](https://github.com/mekyle-s/Job-OS/actions/workflows/ci.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%20%2B%20pgvector-blue.svg)](https://github.com/pgvector/pgvector)
+[![OpenAI](https://img.shields.io/badge/OpenAI-gpt--4o--mini%20%2B%20embeddings-412991.svg)](https://platform.openai.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 ---
 
-## 🎯 The Problem
+## 🎯 What It Does
 
-College students applying to internships face three critical failures:
+Job seekers drown in postings but can't answer the two questions that matter: **"Which of these are actually worth my time?"** and **"How do I prove I'm qualified?"**
 
-1. **Can't prioritize**: Too many job postings, no clear signal on which are worth their time
-2. **Can't prove fit**: Don't know which projects, skills, and experiences actually prove each requirement
-3. **Fragmented workflow**: Scattered across job boards, spreadsheets, resume versions, and browser tabs
+Job OS answers both with an evidence-first pipeline:
 
-**Internship OS solves this** by building a ranked queue of fresh opportunities with requirement-level evidence mapping—showing exactly what proof supports each job requirement, where gaps exist, and what to do next.
+1. **Parse** your resume into a structured Evidence Bank (experiences, projects, skills, education — each with confidence scores and semantic embeddings)
+2. **Monitor** job boards continuously and extract every posting's requirements verbatim with an LLM
+3. **Match** requirements to your evidence with a two-stage retrieval + validation pipeline (pgvector similarity → LLM judgment with provenance)
+4. **Rank** a Fresh Match Queue by fit × freshness, showing exactly which requirements you can prove and where your gaps are
+
+No black-box scores. Every match shows the quoted source text from both the requirement and your evidence.
 
 ---
 
-## ✨ Key Features
+## 🧠 AI Engineering Highlights
 
-### 📋 **Evidence Bank**
+This project is a working case study in production LLM system design — the parts that matter beyond the demo:
 
-- **AI-powered resume parsing**: Upload PDF/DOCX, get structured evidence extraction via GPT-4
-- **Evidence items**: Experiences, projects, skills, education with confidence scores
-- **Manual entry**: Add projects, achievements, and artifacts not in your resume
-- **Semantic embeddings**: Each evidence item vectorized for intelligent matching
+### Two-Stage Retrieval + Validation (cheap first, smart second)
 
-### 🎯 **Fresh Match Queue**
+Pure vector similarity produces false positives; pure LLM comparison doesn't scale. Job OS does both in the right order:
 
-- **Smart job monitoring**: Hourly polling of job boards (Greenhouse adapter, extensible to others)
-- **Ranked by fit**: Combines evidence coverage, job freshness, and requirement alignment
-- **Eligibility filtering**: Visa sponsorship, remote policy, role type, season, graduation window
-- **Status tracking**: Mark roles as Ignore / Save / Apply / Applied
+1. **pgvector HNSW cosine search** (<10ms, effectively free) retrieves top-5 evidence candidates per requirement
+2. **LLM validation** (`gpt-4o-mini`, structured outputs) judges each candidate pair against explicit decision criteria: `match` / `weak_match` / `no_match` with `high`/`medium`/`low` confidence bands
 
-### 🔍 **Requirement → Evidence Mapping**
+### Cost Engineering — Bounded Worst-Case Spend
 
-- **Two-stage matching pipeline**:
-  1. **Vector similarity search**: pgvector + HNSW indexes find top candidates (<10ms)
-  2. **LLM validation**: GPT-4 validates each match with conservative prompting
-- **Decision bands**: `match` (high/medium/low confidence), `weak_match`, or `no_match`
-- **Gap analysis**: Instantly see which requirements lack supporting evidence
-- **Manual overrides**: Edit or remove any AI-generated mapping
-- **Provenance tracking**: Every mapping shows quoted source texts from both requirement and evidence
+The system supports fully open discovery ("all companies, all functions") **without** unbounded API spend:
 
-### 🔔 **Smart Notifications**
+| Guardrail                   | Mechanism                                                                                                                                          |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Top-K evaluation cap**    | All candidate pairs are scored by vector similarity first; only the top 25 unvalidated pairs per run reach the LLM. The rest queue for later runs. |
+| **Extraction cap per poll** | New jobs land at `parseStatus='pending'`; each poll drains at most 25 extractions, freshest first — a self-healing backlog with no state machine.  |
+| **Validation caching**      | Every validated requirement↔evidence pair is persisted; re-runs skip them entirely (zero repeat LLM calls).                                        |
+| **Right-sized models**      | `gpt-4o-mini` for all high-volume extraction/validation (~20× cheaper than GPT-4-class models with no quality loss on structured tasks).           |
+| **Token discipline**        | Condensed system prompts, input caps on resumes (15k chars) and job descriptions (16k chars), batched embedding calls.                             |
 
-- **Email alerts**: Notified when new high-fit roles appear in your queue
-- **No spam**: Respects last notification timestamp, sends digest of new matches
-- **Export proof summaries**: Print-optimized page with all evidence for a specific role
+**Net result: worst-case ~50 mini calls (≈ a cent) per sync cycle, regardless of how wide the search criteria are.**
 
-### 📊 **Audit Trail**
+### Hallucination Prevention & Trust
 
-- **Parser confidence tracking**: Every AI extraction logged with confidence scores
-- **User corrections**: All manual edits captured for model improvement
-- **Version tracking**: Embedding model, LLM model, and prompt versions stored with each mapping
-- **Hallucination prevention**: Source grounding, confidence bands, manual review flags
+- **Structured Outputs** (Zod schemas → OpenAI `response_format`) — extraction can't silently drift from the contract
+- **Conservative prompting** — "when in doubt, `weak_match`"; verbatim extraction only, no inferred requirements
+- **Provenance on every mapping** — quoted source excerpts from both sides, stored at write time
+- **Version tracking** — embedding model, LLM model, and prompt version recorded per mapping for reproducibility
+- **Human-in-the-loop** — `needsReview` flags on uncertain matches; manual overrides are never overwritten by re-runs
+- **Full audit trail** — every parser output and user correction logged (a labeled dataset for future fine-tuning/evals)
+
+---
+
+## ✨ Product Features
+
+- **📋 Evidence Bank** — AI resume parsing (PDF/DOCX → structured items), manual entry, automatic embedding of everything for semantic matching
+- **🔎 Discover Mode** — leave company/function criteria empty to search everything, or target up to 15 specific companies; filter by job type (full-time / part-time / internship / contract)
+- **🎯 Fresh Match Queue** — ranked by `0.7 × fit + 0.3 × freshness` with human-readable fit reasons, status tracking (New / Save / Apply / Applied / Ignore)
+- **📊 Role Briefs** — requirement-by-requirement breakdown with mapped evidence, gap analysis, and a print-optimized proof summary export
+- **🔔 Smart Alerts** — email digests when new high-fit roles appear (rate-limited, no spam)
 
 ---
 
 ## 🛠 Tech Stack
 
-### **Frontend**
-
-- **Next.js 16** (App Router, React Server Components, Turbopack)
-- **React 19** + TypeScript
-- **Tailwind CSS v4** (modern @import syntax)
-- **TanStack Query** (client state management)
-- **nuqs** (URL-based filters)
-
-### **Backend**
-
-- **Node.js** / TypeScript
-- **PostgreSQL 16** + **pgvector extension** (vector similarity search)
-- **Drizzle ORM** (type-safe queries)
-- **pg-boss** (job queue for background workers)
-- **Better Auth** (authentication)
-- **Resend** (transactional email)
-
-### **AI/LLM**
-
-- **OpenAI GPT-4** (gpt-4o-2024-08-06)
-  - Resume parsing with Structured Outputs
-  - Job requirement extraction
-  - Evidence-to-requirement validation
-- **OpenAI text-embedding-3-small** (1536-dim semantic embeddings)
-- **pgvector HNSW indexes** (fast similarity search)
-
-### **Infrastructure**
-
-- **Docker Compose** (local PostgreSQL)
-- **Vercel** (deployment + cron jobs)
-- **Husky + lint-staged** (pre-commit hooks)
+| Layer        | Technology                                                                                            |
+| ------------ | ----------------------------------------------------------------------------------------------------- |
+| **Frontend** | Next.js 16 (App Router, RSC, Turbopack), React 19, TypeScript, Tailwind CSS v4, TanStack Query, nuqs  |
+| **Backend**  | Next.js API routes, Drizzle ORM (type-safe SQL), pg-boss (background job queue), Better Auth, Resend  |
+| **Data**     | PostgreSQL 16 + pgvector (HNSW indexes, 1536-dim), expression indexes for case-insensitive filtering  |
+| **AI**       | OpenAI `gpt-4o-mini` (structured outputs for parsing/extraction/validation), `text-embedding-3-small` |
+| **Infra**    | Docker Compose (local), Vercel (deploy + cron), GitHub Actions CI, Husky + lint-staged                |
 
 ---
 
@@ -103,125 +89,114 @@ College students applying to internships face three critical failures:
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                        User Interface                        │
-│  Evidence Bank · Job Queue · Role Briefs · Status Tracking  │
+│  Evidence Bank · Match Queue · Role Briefs · Status Tracking │
 └────────────────────┬────────────────────────────────────────┘
                      │
 ┌────────────────────┴────────────────────────────────────────┐
 │                     API Layer (Next.js)                      │
-│   /api/evidence  /api/jobs  /api/matching  /api/roles       │
+│   /api/evidence  /api/jobs  /api/matching  /api/roles        │
 └────────────────────┬────────────────────────────────────────┘
                      │
 ┌────────────────────┴────────────────────────────────────────┐
-│                    Business Logic Layer                      │
+│              Background Workers (pg-boss queue)              │
 │                                                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌─────────────────┐  │
-│  │Resume Parser │  │Job Poller    │  │Matching Pipeline│  │
-│  │(GPT-4)       │  │(Greenhouse)  │  │(Vector + LLM)   │  │
-│  └──────────────┘  └──────────────┘  └─────────────────┘  │
+│  ┌──────────────┐  ┌──────────────┐  ┌─────────────────┐    │
+│  │Resume Parser │  │Job Poller    │  │Matching Pipeline│    │
+│  │(gpt-4o-mini) │  │(Greenhouse)  │  │(Vector → LLM)   │    │
+│  └──────────────┘  └──────────────┘  └─────────────────┘    │
 │                                                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌─────────────────┐  │
-│  │Requirement   │  │Notification  │  │Gap Analyzer     │  │
-│  │Extractor     │  │Dispatcher    │  │                 │  │
-│  └──────────────┘  └──────────────┘  └─────────────────┘  │
-└────────────────────┬────────────────────────────────────────┘
-                     │
-┌────────────────────┴────────────────────────────────────────┐
-│                    Data Layer (Drizzle ORM)                  │
+│  ┌──────────────┐  ┌──────────────┐  ┌─────────────────┐    │
+│  │Requirement   │  │Notification  │  │Gap Analyzer     │    │
+│  │Extractor     │  │Dispatcher    │  │                 │    │
+│  └──────────────┘  └──────────────┘  └─────────────────┘    │
 └────────────────────┬────────────────────────────────────────┘
                      │
 ┌────────────────────┴────────────────────────────────────────┐
 │              PostgreSQL 16 + pgvector + pg-boss              │
 │                                                              │
-│  Evidence Items (embeddings)  ←→  Requirements (embeddings) │
+│  Evidence Items (embeddings)  ←→  Requirements (embeddings)  │
 │         ↓                                    ↓               │
-│  Evidence Mappings (validated matches with provenance)      │
+│  Evidence Mappings (validated, with provenance + versions)   │
 └──────────────────────────────────────────────────────────────┘
 ```
 
-### **Matching Pipeline Flow**
+### Matching Pipeline Flow
 
 ```
-1. User uploads resume
-   ↓
-2. Text extraction (pdf2json/mammoth)
-   ↓
-3. GPT-4 Structured Outputs → Evidence items
-   ↓
-4. Generate embeddings (OpenAI text-embedding-3-small)
-   ↓
-5. Store in evidence_item table with vector column
+Resume upload → text extraction (pdf2json/mammoth)
+             → gpt-4o-mini structured parsing → evidence items
+             → batched embeddings → Evidence Bank
+
+Hourly cron  → Greenhouse adapter fetches postings (discover mode = all boards)
+             → new/updated jobs queue at parseStatus='pending'
+             → capped drain: ≤25 requirement extractions per poll (gpt-4o-mini)
+             → requirement embeddings
+
+Matching run → per requirement: pgvector top-5 candidate evidence
+             → global sort by similarity, hard cap: top-25 pairs to LLM
+             → match/weak_match/no_match + confidence + quoted provenance
+             → fit scoring → ranked Fresh Match Queue
+```
 
 ---
 
-6. Background cron polls job sources (hourly)
-   ↓
-7. Greenhouse adapter fetches new jobs
-   ↓
-8. GPT-4 extracts requirements from job descriptions
-   ↓
-9. Generate requirement embeddings
-   ↓
-10. Store in requirement table
+## 📸 Screenshots
+
+### Evidence Bank
+
+AI-powered resume parsing extracts structured evidence with confidence scores — education, work experience, and projects with technologies.
+
+![Evidence Bank](./screenshots/01-evidence-bank.png)
 
 ---
 
-11. User triggers matching for a job
-   ↓
-12. For each requirement:
-    - pgvector similarity search (top 10 candidates)
-    - GPT-4 validates each candidate (match/weak_match/no_match)
-    - Store valid mappings with confidence + provenance
-   ↓
-13. Calculate fit score, coverage %, gaps
-   ↓
-14. Rank jobs by fit + freshness + coverage
-   ↓
-15. Display in Fresh Match Queue UI
-```
+### Fresh Match Queue
+
+Ranked opportunities by fit and freshness, with requirement coverage and gaps at a glance.
+
+![Fresh Match Queue](./screenshots/02-match-queue.png)
+
+---
+
+### Role Brief
+
+Requirement-level evidence mapping showing categories, gaps, and status indicators.
+
+![Role Brief](./screenshots/03-role-brief.png)
 
 ---
 
 ## 🚀 Getting Started
 
-### **Prerequisites**
+### Prerequisites
 
 - Node.js 18+
-- Docker Desktop (for PostgreSQL)
+- Docker Desktop (for PostgreSQL + pgvector)
 - OpenAI API key ([get one here](https://platform.openai.com/api-keys))
-- Resend API key ([get one here](https://resend.com/api-keys))
+- Resend API key (optional — email features degrade gracefully without it)
 
-### **Installation**
+### Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/mekyle-s/Internship-OS.git
-cd Internship-OS
+git clone https://github.com/mekyle-s/Job-OS.git
+cd Job-OS
 
-# Install dependencies
 npm install
 
-# Set up environment variables
 cp .env.example .env.local
-# Edit .env.local and add your API keys:
+# Edit .env.local:
 # - DATABASE_URL (default works for local Docker)
 # - OPENAI_API_KEY
-# - RESEND_API_KEY
-# - BETTER_AUTH_SECRET (generate with: openssl rand -base64 32)
-# - CRON_SECRET (generate with: openssl rand -base64 32)
+# - BETTER_AUTH_SECRET / CRON_SECRET (generate with: openssl rand -base64 32)
 
-# Start PostgreSQL with pgvector
-npm run db:up
-
-# Run database migrations
-npm run db:migrate
-
-# Start development server
-npm run dev
+npm run db:up        # Start PostgreSQL with pgvector
+npm run db:migrate   # Apply migrations
+npm run dev          # Start dev server
 ```
 
 Visit [http://localhost:3000](http://localhost:3000)
 
-### **Database Commands**
+### Database Commands
 
 ```bash
 npm run db:up          # Start PostgreSQL container
@@ -231,209 +206,85 @@ npm run db:migrate     # Run migrations
 npm run db:studio      # Open Drizzle Studio (DB GUI)
 ```
 
----
+### Cost-Guardrail Tuning (optional)
 
-## 📸 Screenshots
-
-### Evidence Bank
-
-AI-powered resume parsing extracts structured evidence with confidence scores, including education, work experiences, and projects with technologies.
-
-![Evidence Bank](./screenshots/01-evidence-bank.png)
-
----
-
-### Fresh Match Queue
-
-Ranked job opportunities by fit, freshness, and evidence coverage. Shows requirement gaps and fit scores at a glance.
-
-![Fresh Match Queue](./screenshots/02-match-queue.png)
-
----
-
-### Role Brief
-
-Requirement-level evidence mapping showing gaps, requirement categories (experience, soft skills, education), and status indicators.
-
-![Role Brief](./screenshots/03-role-brief.png)
+```bash
+MAX_EVALUATIONS_PER_RUN=25    # LLM validation calls per matching run
+MAX_EXTRACTIONS_PER_POLL=25   # requirement extractions per job poll
+```
 
 ---
 
 ## 🎓 Key Technical Decisions
 
-### **1. Trust Over Automation**
-
-- Conservative LLM prompting: "When in doubt, use weak_match"
-- Every mapping shows **source excerpts** from both requirement and evidence
-- Users can **manually override** any AI decision
-- Comprehensive **audit trail** for all parser outputs and corrections
-
-### **2. Two-Stage Matching Pipeline**
-
-Instead of relying solely on vector similarity or LLM:
-
-1. **Vector search** (pgvector HNSW) retrieves top 10 candidates per requirement
-2. **LLM validation** (GPT-4) refines with structured decision criteria
-
-This approach balances **speed** (vector search is <10ms) with **accuracy** (LLM prevents false positives).
-
-### **3. Hallucination Prevention**
-
-- **Source grounding**: Every mapping stores quoted texts
-- **Confidence bands**: Multi-level trust indicators (high/medium/low)
-- **Manual review flags**: `needsReview=true` for uncertain matches
-- **Version tracking**: Log embedding model, LLM model, prompt version
-- **Low temperature** (0.1) for consistent validation
-
-### **4. Performance Optimizations**
-
-- **pgvector HNSW indexes**: <10ms vector search on thousands of items
-- **Circuit breakers**: Max 500 LLM calls per matching run
-- **Background workers**: Resume parsing, job polling, notifications run async
-- **Batch operations**: Store evidence mappings in bulk
-
-### **5. Schema Design**
-
-- **Vector columns nullable**: Gradual embedding generation
-- **Text columns + Zod validation**: Flexible enums without schema migrations
-- **Composite unique indexes**: Prevent duplicate job fetches
-- **Audit tables**: Separate tables for requirement and mapping edits
+1. **Trust over automation** — conservative prompts, quoted provenance, manual overrides, and a full audit trail. The AI proposes; the user stays in control.
+2. **Cheap retrieval before expensive judgment** — vector search does the fan-out, the LLM only sees a hard-capped shortlist. This is the pattern that keeps LLM products economically viable at scale.
+3. **Hard caps over budget trackers** — a per-run cap with a self-draining backlog bounds worst-case spend with zero added state. Simpler beats clever.
+4. **Structured outputs everywhere** — Zod schemas drive both runtime validation and the OpenAI response format, so prompt changes can't silently break the data contract.
+5. **Index-backed everything** — HNSW for vectors, expression indexes (`lower(company)`) for case-insensitive filters, btree on role type / parse status. Query plans stay flat as data grows.
+6. **Versioned AI artifacts** — every mapping records its embedding model, LLM model, and prompt version, making results reproducible and A/B-able.
 
 ---
 
 ## 📦 Project Structure
 
 ```
-internship-os/
+job-os/
 ├── src/
 │   ├── app/                    # Next.js App Router
-│   │   ├── (auth)/            # Auth pages (sign-in, sign-up, etc.)
-│   │   ├── dashboard/         # Main application UI
-│   │   │   ├── evidence/      # Evidence bank pages
-│   │   │   ├── jobs/          # Job listings
-│   │   │   ├── queue/         # Fresh Match Queue
-│   │   │   └── roles/         # Role briefs
-│   │   └── api/               # API routes
-│   │       ├── evidence/      # Resume upload, CRUD
-│   │       ├── jobs/          # Job management
-│   │       ├── matching/      # Matching pipeline
-│   │       ├── roles/         # Status tracking
-│   │       └── cron/          # Vercel cron endpoints
-│   ├── components/            # React components
-│   │   ├── auth/              # Auth forms
-│   │   └── evidence/          # Evidence UI components
+│   │   ├── (auth)/             # Sign-in / sign-up / password reset
+│   │   ├── dashboard/          # Evidence, jobs, queue, role briefs
+│   │   └── api/                # REST endpoints + Vercel cron
+│   ├── components/             # React components
 │   ├── lib/
-│   │   ├── db/                # Database layer
-│   │   │   ├── schema.ts      # Drizzle schema
-│   │   │   └── queries/       # Query functions
-│   │   ├── jobs/              # Job pipeline
-│   │   │   ├── sources/       # Job source adapters
-│   │   │   ├── parsers/       # Requirement extraction
-│   │   │   └── workers/       # Background workers
-│   │   ├── matching/          # Matching engine
-│   │   │   ├── embedder.ts    # Embedding generation
-│   │   │   ├── similarity.ts  # Vector search
-│   │   │   ├── mapper.ts      # LLM validation
-│   │   │   ├── ranker.ts      # Scoring algorithm
-│   │   │   └── pipeline.ts    # Orchestrator
-│   │   ├── schemas/           # Zod validation schemas
-│   │   └── hooks/             # React hooks
-│   └── middleware.ts          # Auth middleware
-├── migrations/                # Database migrations
-├── scripts/                   # Utility scripts
-├── .planning/                 # Project planning docs
-│   ├── PROJECT.md             # Requirements & context
-│   ├── ROADMAP.md             # Phase breakdown
-│   └── phases/                # Execution plans & summaries
-├── docker-compose.yml         # PostgreSQL + pgvector
-├── drizzle.config.ts          # Drizzle ORM config
-└── vercel.json                # Vercel cron jobs
-```
-
----
-
-## 🔐 Environment Variables
-
-```bash
-# Database
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/internship_os_dev
-
-# App
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-
-# Authentication (Better Auth)
-BETTER_AUTH_SECRET=your-secret-key-min-32-chars
-RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxx
-EMAIL_FROM=Internship OS <onboarding@resend.dev>
-
-# AI (OpenAI)
-OPENAI_API_KEY=sk-your-openai-api-key
-
-# Cron Security
-CRON_SECRET=your-cron-secret-key
+│   │   ├── db/                 # Drizzle schema + query layer
+│   │   ├── jobs/               # Polling pipeline
+│   │   │   ├── sources/        # Job board adapters (Greenhouse; extensible)
+│   │   │   ├── parsers/        # LLM requirement extraction
+│   │   │   └── workers/        # pg-boss background workers
+│   │   ├── matching/           # Matching engine
+│   │   │   ├── embedder.ts     # Embedding generation (batched)
+│   │   │   ├── similarity.ts   # pgvector cosine search
+│   │   │   ├── mapper.ts       # LLM validation w/ decision bands
+│   │   │   ├── ranker.ts       # Fit × freshness scoring
+│   │   │   └── pipeline.ts     # Orchestrator + cost guardrails
+│   │   ├── parsers/            # Resume parsing (PDF/DOCX + LLM)
+│   │   └── schemas/            # Zod validation schemas
+│   └── middleware.ts           # Auth middleware
+├── migrations/                 # Drizzle migrations (incl. HNSW indexes)
+├── .github/workflows/ci.yml    # Lint + build CI
+├── docker-compose.yml          # PostgreSQL + pgvector
+└── vercel.json                 # Cron schedules
 ```
 
 ---
 
 ## 🚧 Roadmap
 
-### ✅ **V1 Complete** (Current)
-
-- Evidence bank with resume parsing
-- Job monitoring (Greenhouse)
-- Requirement extraction
-- Two-stage matching pipeline
-- Fresh Match Queue UI
-- Role briefs with evidence mapping
-- Application tracking
-- Email notifications
-
-### 🔮 **Future Enhancements**
-
-- [ ] Chrome extension for save-to-queue
-- [ ] Additional job sources (Indeed, LinkedIn)
-- [ ] GitHub activity enrichment
-- [ ] Automatic brag doc / story bank generation
+- [ ] Additional job sources (Lever, Ashby, LinkedIn)
+- [ ] Offline eval harness for the matching pipeline (using the audit-trail corrections as labels)
+- [ ] Prompt-caching + OpenAI Batch API for the extraction backlog
+- [ ] GitHub activity enrichment for the Evidence Bank
 - [ ] Outcome-based ranking (which mappings led to interviews)
-- [ ] Recruiter outreach suggestions
-- [ ] Mobile app with push notifications
-- [ ] Collaborative features for career coaches
+- [ ] Chrome extension for save-to-queue
 
 ---
 
 ## 🤝 Contributing
 
-This project is primarily a portfolio piece, but I'm open to feedback and suggestions! If you find a bug or have an idea:
-
-1. Open an issue describing the problem/feature
-2. Feel free to fork and submit a PR
-3. Follow the existing code style (ESLint + Prettier)
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines.
-
----
+Primarily a portfolio project, but feedback and PRs are welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
-
----
-
-## 🙏 Acknowledgments
-
-- **OpenAI** for GPT-4 and text-embedding-3-small
-- **pgvector** team for the excellent PostgreSQL vector extension
-- **Vercel** for seamless Next.js deployment
-- **Better Auth** for the auth framework
-- **Drizzle ORM** for type-safe database queries
+MIT — see [LICENSE](./LICENSE).
 
 ---
 
 ## 📧 Contact
 
-Built by **Mekyle** | [GitHub](https://github.com/mekyle-s) | [LinkedIn](linkedin.com/in/m-siddiqi)
+Built by **Mekyle Siddiqi** | [GitHub](https://github.com/mekyle-s) | [LinkedIn](https://linkedin.com/in/m-siddiqi)
 
-_Looking for Summer 2026 internships in Data Engineering, Analytics, and AI/Agentic Development._
+_Open to roles in AI Engineering, Solutions / Forward-Deployed Engineering, Analytics Engineering, and Software Engineering._
 
 ---
 

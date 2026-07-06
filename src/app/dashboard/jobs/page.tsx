@@ -15,9 +15,20 @@ type Job = {
   _count: { requirements: number };
 };
 
+const JOB_TYPE_FILTERS = [
+  { value: 'all', label: 'All types' },
+  { value: 'full_time', label: 'Full-time' },
+  { value: 'part_time', label: 'Part-time' },
+  { value: 'internship', label: 'Internship' },
+  { value: 'contract', label: 'Contract' },
+] as const;
+
 export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [hasCriteria, setHasCriteria] = useState<boolean | null>(null);
+  const [targetCompanies, setTargetCompanies] = useState<string[]>([]);
+  const [jobTypeFilter, setJobTypeFilter] = useState('all');
+  const [companyFilter, setCompanyFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -39,20 +50,23 @@ export default function JobsPage() {
             setIsLoading(false);
             return;
           }
+          setTargetCompanies(criteriaData.criteria.targetCompanies || []);
         }
 
         // Load jobs (disable cache to ensure fresh data)
-        const jobsResponse = await fetch(`/api/jobs?limit=${limit}&offset=${offset}`, {
+        const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+        if (jobTypeFilter !== 'all') params.set('jobType', jobTypeFilter);
+        if (companyFilter !== 'all') params.set('company', companyFilter);
+        const jobsResponse = await fetch(`/api/jobs?${params.toString()}`, {
           cache: 'no-store',
         });
         if (jobsResponse.ok) {
           const jobsData = await jobsResponse.json();
           // Deduplicate jobs by ID to prevent React key errors
           setJobs((prev) => {
-            // If offset is 0, replace all jobs ONLY if we got results
-            // This prevents clearing jobs if API returns empty for some reason
+            // If offset is 0, replace the list (filters may legitimately return empty)
             if (offset === 0) {
-              return jobsData.jobs.length > 0 ? jobsData.jobs : prev;
+              return jobsData.jobs;
             }
             // Otherwise append new jobs, filtering out duplicates
             const existingIds = new Set(prev.map((j) => j.id));
@@ -72,11 +86,27 @@ export default function JobsPage() {
     }
 
     loadJobs();
-  }, [offset]);
+  }, [offset, jobTypeFilter, companyFilter]);
 
   const loadMore = () => {
     setOffset((prev) => prev + limit);
   };
+
+  const changeJobTypeFilter = (value: string) => {
+    setJobTypeFilter(value);
+    setOffset(0);
+  };
+
+  const changeCompanyFilter = (value: string) => {
+    setCompanyFilter(value);
+    setOffset(0);
+  };
+
+  // In discover mode (no target companies) offer the companies actually loaded
+  const companyOptions =
+    targetCompanies.length > 0
+      ? targetCompanies
+      : Array.from(new Set(jobs.map((j) => j.company))).sort();
 
   const triggerPoll = async () => {
     setIsPolling(true);
@@ -89,7 +119,9 @@ export default function JobsPage() {
 
       if (response.ok) {
         setPollMessage(
-          `Poll queued! Fetching jobs from ${data.targetCompanies.length} companies. Refresh in 10-30 seconds to see results.`
+          data.targetCompanies.length === 0
+            ? 'Poll queued! Discovering jobs from all monitored companies. Refresh in 10-30 seconds to see results.'
+            : `Poll queued! Fetching jobs from ${data.targetCompanies.length} companies. Refresh in 10-30 seconds to see results.`
         );
         // Auto-reload after 15 seconds
         setTimeout(() => {
@@ -205,6 +237,41 @@ export default function JobsPage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8">
+        {/* Job type + company filters */}
+        <div className="bg-white rounded-lg shadow p-4 mb-6">
+          <div className="flex flex-wrap items-center gap-4">
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <span className="font-medium">Job type:</span>
+              <select
+                value={jobTypeFilter}
+                onChange={(e) => changeJobTypeFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {JOB_TYPE_FILTERS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <span className="font-medium">Company:</span>
+              <select
+                value={companyFilter}
+                onChange={(e) => changeCompanyFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All companies</option>
+                {companyOptions.map((company) => (
+                  <option key={company} value={company}>
+                    {company}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </div>
+
         {pollMessage && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
             <p className="text-sm text-green-700">{pollMessage}</p>

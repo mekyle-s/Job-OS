@@ -15,7 +15,7 @@ export default async function DashboardPage() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-semibold text-gray-900">Internship OS</h1>
+          <h1 className="text-xl font-semibold text-gray-900">Job OS</h1>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-600">{user.email}</span>
             <SignOutButton />
@@ -26,7 +26,9 @@ export default async function DashboardPage() {
         <div className="grid gap-6 md:grid-cols-2">
           {/* User Info Card */}
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Welcome, {user.name || 'User'}</h2>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">
+              Welcome, {user.name || 'User'}
+            </h2>
             <p className="text-gray-600 mb-4">Your dashboard is ready.</p>
             <div className="p-4 bg-gray-50 rounded-md">
               <p className="text-sm text-gray-500">User ID: {user.id}</p>
@@ -76,9 +78,11 @@ export default async function DashboardPage() {
               <div>
                 <h3 className="text-lg font-medium text-gray-900">Jobs</h3>
                 <p className="text-sm text-gray-600 mt-1">
-                  {criteria
-                    ? `Monitoring ${criteria.targetCompanies.length} ${criteria.targetCompanies.length === 1 ? 'company' : 'companies'}`
-                    : 'No criteria set up yet'}
+                  {!criteria
+                    ? 'No criteria set up yet'
+                    : criteria.targetCompanies.length === 0
+                      ? 'Discovering all companies'
+                      : `Monitoring ${criteria.targetCompanies.length} ${criteria.targetCompanies.length === 1 ? 'company' : 'companies'}`}
                 </p>
               </div>
               <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
@@ -121,9 +125,7 @@ export default async function DashboardPage() {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h3 className="text-lg font-medium text-gray-900">Fresh Match Queue</h3>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Ranked opportunities by fit
-                  </p>
+                  <p className="text-sm text-gray-600 mt-1">Ranked opportunities by fit</p>
                 </div>
                 <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center">
                   <svg

@@ -4,11 +4,20 @@ import { useState, useEffect, KeyboardEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
+type JobType = 'full_time' | 'part_time' | 'internship';
+
+const JOB_TYPE_OPTIONS: { value: JobType; label: string }[] = [
+  { value: 'full_time', label: 'Full-time' },
+  { value: 'part_time', label: 'Part-time' },
+  { value: 'internship', label: 'Internship' },
+];
+
 type CriteriaFormData = {
   jobFunction: string;
   locations: string[];
   visaRequired: boolean;
   targetCompanies: string[];
+  jobTypes: JobType[];
 };
 
 export default function CriteriaPage() {
@@ -18,6 +27,7 @@ export default function CriteriaPage() {
     locations: [],
     visaRequired: false,
     targetCompanies: [],
+    jobTypes: [],
   });
 
   const [locationInput, setLocationInput] = useState('');
@@ -40,6 +50,7 @@ export default function CriteriaPage() {
               locations: data.criteria.locations || [],
               visaRequired: data.criteria.visaRequired || false,
               targetCompanies: data.criteria.targetCompanies || [],
+              jobTypes: data.criteria.jobTypes || [],
             });
           }
         }
@@ -108,12 +119,7 @@ export default function CriteriaPage() {
     setError(null);
     setSuccess(false);
 
-    // Validation
-    if (formData.targetCompanies.length === 0) {
-      setError('Add at least 1 company');
-      return;
-    }
-
+    // Validation (empty companies = "All companies" discover mode)
     if (formData.targetCompanies.length > 15) {
       setError('Maximum 15 companies');
       return;
@@ -130,6 +136,7 @@ export default function CriteriaPage() {
           locations: formData.locations.length > 0 ? formData.locations : null,
           visaRequired: formData.visaRequired || null,
           targetCompanies: formData.targetCompanies,
+          jobTypes: formData.jobTypes.length > 0 ? formData.jobTypes : null,
         }),
       });
 
@@ -169,7 +176,7 @@ export default function CriteriaPage() {
           >
             ← Back to Dashboard
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Job Criteria</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Job Search Criteria</h1>
         </div>
       </header>
 
@@ -186,9 +193,41 @@ export default function CriteriaPage() {
                 id="jobFunction"
                 value={formData.jobFunction}
                 onChange={(e) => setFormData({ ...formData, jobFunction: e.target.value })}
-                placeholder="e.g., Software Engineering, Product Management"
+                placeholder="All functions (Discover mode) — e.g., Software Engineering"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              <p className="text-sm text-gray-500 mt-1">Leave empty to discover every function</p>
+            </div>
+
+            {/* Job Types */}
+            <div>
+              <span className="block text-sm font-medium text-gray-700 mb-2">Job Types</span>
+              <div className="flex flex-wrap gap-4">
+                {JOB_TYPE_OPTIONS.map((option) => (
+                  <label
+                    key={option.value}
+                    className="flex items-center gap-2 text-sm text-gray-700"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.jobTypes.includes(option.value)}
+                      onChange={(e) => {
+                        setFormData({
+                          ...formData,
+                          jobTypes: e.target.checked
+                            ? [...formData.jobTypes, option.value]
+                            : formData.jobTypes.filter((t) => t !== option.value),
+                        });
+                      }}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    {option.label}
+                  </label>
+                ))}
+              </div>
+              <p className="text-sm text-gray-500 mt-1">
+                Leave all unchecked to see every job type
+              </p>
             </div>
 
             {/* Locations */}
@@ -270,11 +309,14 @@ export default function CriteriaPage() {
                 value={companyInput}
                 onChange={(e) => setCompanyInput(e.target.value)}
                 onKeyDown={handleCompanyKeyDown}
-                placeholder="e.g., Stripe, Airbnb, Cloudflare (press Enter to add)"
+                placeholder="All companies (Discover mode) — press Enter to add specific ones"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 disabled={formData.targetCompanies.length >= 15}
               />
-              <p className="text-sm text-gray-500 mt-1">Press Enter to add each company (max 15)</p>
+              <p className="text-sm text-gray-500 mt-1">
+                Leave empty to discover jobs from all monitored companies, or add up to 15 specific
+                targets
+              </p>
             </div>
 
             {/* Error/Success Messages */}
@@ -305,8 +347,8 @@ export default function CriteriaPage() {
           {/* Source Transparency Notice */}
           <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-sm text-yellow-800">
-              <strong>Note:</strong> We currently monitor Greenhouse job boards. Not all companies use
-              Greenhouse — your target companies will only show results if they post jobs on
+              <strong>Note:</strong> We currently monitor Greenhouse job boards. Not all companies
+              use Greenhouse — your target companies will only show results if they post jobs on
               Greenhouse.
             </p>
           </div>

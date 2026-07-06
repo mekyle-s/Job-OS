@@ -5,7 +5,7 @@
  * Filter order:
  * 1. Visa/Work Authorization
  * 2. Location/Remote
- * 3. Internship vs Full-Time
+ * 3. Job Type (full-time / part-time / internship / contract)
  * 4. Season/Term
  * 5. Graduation Window
  *
@@ -18,6 +18,8 @@ export interface UserCriteriaFilters {
   acceptRemote?: boolean;
   targetSeason?: string;
   graduationYear?: string;
+  /** Job types the user wants: 'internship' | 'full_time' | 'part_time' | 'contract'. Empty/undefined = all */
+  jobTypes?: string[];
 }
 
 export interface JobWithFilters {
@@ -54,18 +56,23 @@ export function filterEligibleJobs(
       const userLocations = userCriteria.locations || [];
       const hasLocationMatch =
         userLocations.length === 0 || // User accepts any location
-        userLocations.some((loc) =>
-          job.location.toLowerCase().includes(loc.toLowerCase())
-        );
+        userLocations.some((loc) => job.location.toLowerCase().includes(loc.toLowerCase()));
 
       if (!hasLocationMatch) {
         return false; // Job is on-site and location doesn't match
       }
     }
 
-    // Filter 3: Role Type (V1 is internship-only)
-    if (job.roleType === 'full_time') {
-      return false; // Exclude full-time roles in V1
+    // Filter 3: Job Type
+    // Exclude only explicit mismatches; unknown role types pass through
+    if (
+      userCriteria.jobTypes &&
+      userCriteria.jobTypes.length > 0 &&
+      job.roleType &&
+      job.roleType !== 'unknown' &&
+      !userCriteria.jobTypes.includes(job.roleType)
+    ) {
+      return false; // Job type doesn't match user's selected types
     }
 
     // Filter 4: Season/Term

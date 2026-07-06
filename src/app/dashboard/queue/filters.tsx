@@ -2,7 +2,7 @@
 
 import { useQueryState, parseAsStringLiteral } from 'nuqs';
 
-const statusValues = ['all', 'ignore', 'save', 'apply', 'applied'] as const;
+const statusValues = ['all', 'new', 'ignore', 'save', 'apply', 'applied'] as const;
 
 /**
  * Queue filter bar with URL state synchronization.
@@ -16,6 +16,7 @@ export function QueueFilters() {
 
   const filterOptions = [
     { value: 'all', label: 'All' },
+    { value: 'new', label: 'New' },
     { value: 'ignore', label: 'Ignore' },
     { value: 'save', label: 'Save' },
     { value: 'apply', label: 'Apply' },
