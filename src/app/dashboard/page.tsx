@@ -78,9 +78,11 @@ export default async function DashboardPage() {
               <div>
                 <h3 className="text-lg font-medium text-gray-900">Jobs</h3>
                 <p className="text-sm text-gray-600 mt-1">
-                  {criteria
-                    ? `Monitoring ${criteria.targetCompanies.length} ${criteria.targetCompanies.length === 1 ? 'company' : 'companies'}`
-                    : 'No criteria set up yet'}
+                  {!criteria
+                    ? 'No criteria set up yet'
+                    : criteria.targetCompanies.length === 0
+                      ? 'Discovering all companies'
+                      : `Monitoring ${criteria.targetCompanies.length} ${criteria.targetCompanies.length === 1 ? 'company' : 'companies'}`}
                 </p>
               </div>
               <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">

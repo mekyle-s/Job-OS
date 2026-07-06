@@ -2,10 +2,21 @@ import type { Job } from 'pg-boss';
 import { getAdapter } from '../sources';
 import type { UserCriteriaInput } from '../sources/adapter';
 import { getUserCriteria, updateLastPolledAt } from '@/lib/db/queries/user-criteria';
-import { upsertRawJobSource, upsertJob, markJobsInactive } from '@/lib/db/queries/jobs';
+import {
+  upsertRawJobSource,
+  upsertJob,
+  markJobsInactive,
+  getPendingParseJobs,
+} from '@/lib/db/queries/jobs';
 import { getJobQueue } from '../index';
 
 export const JOB_POLLER_QUEUE = 'poll-jobs-for-user';
+
+// Hard cap on requirement-extraction jobs queued per poll run. Each extraction
+// is one gpt-4o-mini call, and a discover-mode poll (all boards) can surface
+// hundreds of new jobs at once. Jobs beyond the cap keep parseStatus='pending'
+// and are drained, freshest first, by subsequent hourly polls.
+const MAX_EXTRACTIONS_PER_POLL = Number(process.env.MAX_EXTRACTIONS_PER_POLL ?? 25);
 
 /**
  * Map adapter employment type strings ('full-time', 'part-time', 'internship',
@@ -60,13 +71,20 @@ export async function jobPollerHandler(jobs: Job<PollJobsPayload>[]) {
     throw new Error('Greenhouse adapter not found');
   }
 
-  // 3. Build criteria input for adapter
+  // 3. Build criteria input for adapter.
+  // Empty targetCompanies = "All companies" discover mode: poll every board
+  // this adapter monitors.
+  const companiesToPoll =
+    criteria.targetCompanies.length > 0
+      ? criteria.targetCompanies
+      : adapter.getMonitoredCompanies();
+
   const criteriaInput: UserCriteriaInput = {
     userId,
     jobFunction: criteria.jobFunction,
     locations: criteria.locations,
     visaRequired: criteria.visaRequired,
-    targetCompanies: criteria.targetCompanies,
+    targetCompanies: companiesToPoll,
   };
 
   // 4. Fetch raw jobs from adapter
@@ -93,11 +111,7 @@ export async function jobPollerHandler(jobs: Job<PollJobsPayload>[]) {
       const canonical = adapter.normalizeJob(rawJob);
 
       // c. Upsert canonical job (persist role type for multi-tier filtering)
-      const {
-        job: canonicalJob,
-        isNew,
-        isUpdated,
-      } = await upsertJob({
+      const { isNew, isUpdated } = await upsertJob({
         source: canonical.sourceName,
         sourceJobId: canonical.sourceId,
         title: canonical.title,
@@ -114,19 +128,13 @@ export async function jobPollerHandler(jobs: Job<PollJobsPayload>[]) {
 
       jobsFetched++;
 
-      // d. If new or updated, queue requirement extraction
+      // d. Count new/updated jobs. Extraction is NOT queued per job here —
+      // new and updated jobs sit at parseStatus='pending' and are queued
+      // below under the per-poll cap.
       if (isNew) {
         newJobs++;
-        await boss.send('extract-requirements', {
-          jobId: canonicalJob.id,
-          description: canonicalJob.description,
-        });
       } else if (isUpdated) {
         updatedJobs++;
-        await boss.send('extract-requirements', {
-          jobId: canonicalJob.id,
-          description: canonicalJob.description,
-        });
       }
     } catch (error) {
       console.error(`[JobPoller] Failed to process job ${rawJob.sourceId}:`, error);
@@ -134,10 +142,24 @@ export async function jobPollerHandler(jobs: Job<PollJobsPayload>[]) {
     }
   }
 
+  // 5b. Queue requirement extraction for pending jobs, capped per run.
+  // This drains both this poll's new/updated jobs and any backlog from
+  // earlier capped runs, freshest first.
+  const pendingJobs = await getPendingParseJobs(MAX_EXTRACTIONS_PER_POLL);
+  for (const pending of pendingJobs) {
+    await boss.send('extract-requirements', {
+      jobId: pending.id,
+      description: pending.description,
+    });
+  }
+  console.log(
+    `[JobPoller] Queued ${pendingJobs.length} requirement extractions (cap: ${MAX_EXTRACTIONS_PER_POLL})`
+  );
+
   // 6. Mark missing jobs as inactive
-  // For each company in criteria, get active job IDs from adapter and mark missing as inactive
+  // For each polled company, get active job IDs from adapter and mark missing as inactive
   // CRITICAL: Must pass company name to scope the inactive marking to that company only
-  for (const companyName of criteria.targetCompanies) {
+  for (const companyName of companiesToPoll) {
     try {
       // Greenhouse uses lowercase company names as board tokens
       const boardToken = companyName.toLowerCase();

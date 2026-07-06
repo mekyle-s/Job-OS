@@ -12,12 +12,10 @@ import { EMBEDDING_MODEL_VERSION, MATCHING_PROMPT_VERSION, LLM_MODEL_VERSION } f
  * Per CONTEXT.md locked decision #7: Preserve manual overrides, never auto-overwrite.
  *
  * Two-stage pipeline per research:
- * 1. Vector similarity retrieves top candidates (10 per requirement)
- * 2. LLM validates with decision bands
- *
- * Hard limits per research Pitfall 4:
- * - Max 10 candidates per requirement (vector search top-K)
- * - Max 500 LLM calls per matching run (circuit breaker)
+ * 1. Vector similarity retrieves top candidates (cheap pgvector cosine search)
+ * 2. LLM validates with decision bands — but only the top-K candidate pairs
+ *    by similarity score (hard cap), so worst-case spend per run is bounded
+ *    even in open "discover mode" with no company criteria.
  */
 
 export interface MatchingResult {
@@ -30,7 +28,13 @@ export interface MatchingResult {
 // 5 candidates per requirement: vector search is cheap but each candidate costs
 // one LLM validation call — top-5 keeps recall high while halving LLM spend
 const MAX_CANDIDATES_PER_REQUIREMENT = 5;
-const MAX_LLM_CALLS_PER_RUN = 500;
+
+// Hard cap on LLM validation calls per matching run. With open discover-mode
+// criteria a run could otherwise fan out to hundreds of gpt-4o-mini calls.
+// Pairs beyond the cap stay unvalidated and are picked up by later runs
+// (already-validated pairs are skipped, so each run works down the ranking).
+// Overridable via env for tuning without a deploy.
+const MAX_EVALUATIONS_PER_RUN = Number(process.env.MAX_EVALUATIONS_PER_RUN ?? 25);
 
 /**
  * Run the full matching pipeline for a single job.
@@ -157,7 +161,13 @@ export async function runMatchingForJob(jobId: string, userId: string): Promise<
     llmModelVersion: string;
   }> = [];
 
-  let llmCallCount = 0;
+  // 3a/3b: Top-K embedding guardrail — collect every unvalidated
+  // requirement↔evidence candidate pair via cheap pgvector cosine search.
+  // No LLM calls happen in this phase.
+  const scoredCandidates: Array<{
+    req: (typeof requirements)[number];
+    candidate: Awaited<ReturnType<typeof findSimilarEvidence>>[number];
+  }> = [];
 
   for (const req of requirements) {
     // Skip if has manual override
@@ -166,7 +176,7 @@ export async function runMatchingForJob(jobId: string, userId: string): Promise<
       continue;
     }
 
-    // 3a: Embeddings were batch-generated above; skip anything still missing
+    // Embeddings were batch-generated above; skip anything still missing
     const reqEmbedding: number[] | null = req.embedding as number[] | null;
 
     if (!reqEmbedding) {
@@ -174,7 +184,6 @@ export async function runMatchingForJob(jobId: string, userId: string): Promise<
       continue;
     }
 
-    // 3b: Find similar evidence using vector search
     const candidates = await findSimilarEvidence(
       reqEmbedding,
       userId,
@@ -182,78 +191,75 @@ export async function runMatchingForJob(jobId: string, userId: string): Promise<
       0.3 // Low threshold since LLM refines
     );
 
-    console.log(
-      `[Matching Pipeline] Found ${candidates.length} similar evidence items for requirement ${req.id}`
-    );
-
-    // 3c: Validate each candidate with LLM
     for (const candidate of candidates) {
       // Skip pairs already validated in a previous run (cache hit — no LLM call)
       if (validatedPairs.has(`${req.id}:${candidate.id}`)) {
         continue;
       }
-
-      // Circuit breaker
-      if (llmCallCount >= MAX_LLM_CALLS_PER_RUN) {
-        console.warn(
-          `[Matching Pipeline] Reached max LLM calls (${MAX_LLM_CALLS_PER_RUN}), stopping validation`
-        );
-        break;
-      }
-
-      llmCallCount++;
-
-      // Construct evidence context from candidate
-      const evidenceParts = [candidate.title];
-      if (candidate.company) evidenceParts.push(`at ${candidate.company}`);
-      if (candidate.content) evidenceParts.push(candidate.content);
-      if (candidate.metadata?.skills)
-        evidenceParts.push(`Skills: ${candidate.metadata.skills.join(', ')}`);
-      if (candidate.metadata?.technologies)
-        evidenceParts.push(`Technologies: ${candidate.metadata.technologies.join(', ')}`);
-
-      const evidenceContext = evidenceParts.join(' | ');
-
-      try {
-        const validation = await validateEvidenceMatch(req.normalizedText, evidenceContext);
-
-        // 3d: Filter - keep match and weak_match, discard no_match
-        if (validation.decision === 'match' || validation.decision === 'weak_match') {
-          allNewMappings.push({
-            userId,
-            requirementId: req.id,
-            evidenceItemId: candidate.id,
-            decision: validation.decision,
-            confidenceBand: validation.confidenceBand,
-            reason: validation.reason,
-            needsReview: validation.needsReview,
-            sourceRequirementText: req.sourceText,
-            sourceEvidenceExcerpt: validation.quotedEvidenceText,
-            embeddingModelVersion: EMBEDDING_MODEL_VERSION,
-            matchingPromptVersion: MATCHING_PROMPT_VERSION,
-            llmModelVersion: LLM_MODEL_VERSION,
-          });
-
-          console.log(
-            `[Matching Pipeline] Validated ${validation.decision} for requirement ${req.id} + evidence ${candidate.id}`
-          );
-        } else {
-          console.log(
-            `[Matching Pipeline] Rejected no_match for requirement ${req.id} + evidence ${candidate.id}`
-          );
-        }
-      } catch (error) {
-        console.error(
-          `[Matching Pipeline] LLM validation failed for requirement ${req.id} + evidence ${candidate.id}:`,
-          error
-        );
-        // Continue with next candidate
-      }
+      scoredCandidates.push({ req, candidate });
     }
+  }
 
-    // Break outer loop if circuit breaker triggered
-    if (llmCallCount >= MAX_LLM_CALLS_PER_RUN) {
-      break;
+  // Hard cap: sort by vector similarity and feed ONLY the top pairs to the
+  // LLM. Everything below the cap stays unmapped for later runs.
+  scoredCandidates.sort((a, b) => b.candidate.similarity - a.candidate.similarity);
+  const toValidate = scoredCandidates.slice(0, MAX_EVALUATIONS_PER_RUN);
+
+  console.log(
+    `[Matching Pipeline] ${scoredCandidates.length} candidate pairs from vector search, validating top ${toValidate.length} (cap: ${MAX_EVALUATIONS_PER_RUN})`
+  );
+
+  // 3c: Validate the capped set with the LLM
+  let llmCallCount = 0;
+
+  for (const { req, candidate } of toValidate) {
+    llmCallCount++;
+
+    // Construct evidence context from candidate
+    const evidenceParts = [candidate.title];
+    if (candidate.company) evidenceParts.push(`at ${candidate.company}`);
+    if (candidate.content) evidenceParts.push(candidate.content);
+    if (candidate.metadata?.skills)
+      evidenceParts.push(`Skills: ${candidate.metadata.skills.join(', ')}`);
+    if (candidate.metadata?.technologies)
+      evidenceParts.push(`Technologies: ${candidate.metadata.technologies.join(', ')}`);
+
+    const evidenceContext = evidenceParts.join(' | ');
+
+    try {
+      const validation = await validateEvidenceMatch(req.normalizedText, evidenceContext);
+
+      // 3d: Filter - keep match and weak_match, discard no_match
+      if (validation.decision === 'match' || validation.decision === 'weak_match') {
+        allNewMappings.push({
+          userId,
+          requirementId: req.id,
+          evidenceItemId: candidate.id,
+          decision: validation.decision,
+          confidenceBand: validation.confidenceBand,
+          reason: validation.reason,
+          needsReview: validation.needsReview,
+          sourceRequirementText: req.sourceText,
+          sourceEvidenceExcerpt: validation.quotedEvidenceText,
+          embeddingModelVersion: EMBEDDING_MODEL_VERSION,
+          matchingPromptVersion: MATCHING_PROMPT_VERSION,
+          llmModelVersion: LLM_MODEL_VERSION,
+        });
+
+        console.log(
+          `[Matching Pipeline] Validated ${validation.decision} for requirement ${req.id} + evidence ${candidate.id}`
+        );
+      } else {
+        console.log(
+          `[Matching Pipeline] Rejected no_match for requirement ${req.id} + evidence ${candidate.id}`
+        );
+      }
+    } catch (error) {
+      console.error(
+        `[Matching Pipeline] LLM validation failed for requirement ${req.id} + evidence ${candidate.id}:`,
+        error
+      );
+      // Continue with next candidate
     }
   }
 

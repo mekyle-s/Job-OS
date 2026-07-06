@@ -102,6 +102,12 @@ export default function JobsPage() {
     setOffset(0);
   };
 
+  // In discover mode (no target companies) offer the companies actually loaded
+  const companyOptions =
+    targetCompanies.length > 0
+      ? targetCompanies
+      : Array.from(new Set(jobs.map((j) => j.company))).sort();
+
   const triggerPoll = async () => {
     setIsPolling(true);
     setPollMessage(null);
@@ -113,7 +119,9 @@ export default function JobsPage() {
 
       if (response.ok) {
         setPollMessage(
-          `Poll queued! Fetching jobs from ${data.targetCompanies.length} companies. Refresh in 10-30 seconds to see results.`
+          data.targetCompanies.length === 0
+            ? 'Poll queued! Discovering jobs from all monitored companies. Refresh in 10-30 seconds to see results.'
+            : `Poll queued! Fetching jobs from ${data.targetCompanies.length} companies. Refresh in 10-30 seconds to see results.`
         );
         // Auto-reload after 15 seconds
         setTimeout(() => {
@@ -254,7 +262,7 @@ export default function JobsPage() {
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">All companies</option>
-                {targetCompanies.map((company) => (
+                {companyOptions.map((company) => (
                   <option key={company} value={company}>
                     {company}
                   </option>

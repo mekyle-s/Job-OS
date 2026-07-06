@@ -31,6 +31,13 @@ export class GreenhouseAdapter implements JobSource {
   };
 
   /**
+   * All companies this adapter can poll (discover mode polls every board)
+   */
+  getMonitoredCompanies(): string[] {
+    return Object.keys(this.boardTokens);
+  }
+
+  /**
    * Fetch jobs matching user criteria
    *
    * Processes companies sequentially to avoid rate limits (per Pitfall 1)

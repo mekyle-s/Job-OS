@@ -119,12 +119,7 @@ export default function CriteriaPage() {
     setError(null);
     setSuccess(false);
 
-    // Validation
-    if (formData.targetCompanies.length === 0) {
-      setError('Add at least 1 company');
-      return;
-    }
-
+    // Validation (empty companies = "All companies" discover mode)
     if (formData.targetCompanies.length > 15) {
       setError('Maximum 15 companies');
       return;
@@ -198,9 +193,10 @@ export default function CriteriaPage() {
                 id="jobFunction"
                 value={formData.jobFunction}
                 onChange={(e) => setFormData({ ...formData, jobFunction: e.target.value })}
-                placeholder="e.g., Software Engineering, Product Management"
+                placeholder="All functions (Discover mode) — e.g., Software Engineering"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              <p className="text-sm text-gray-500 mt-1">Leave empty to discover every function</p>
             </div>
 
             {/* Job Types */}
@@ -313,11 +309,14 @@ export default function CriteriaPage() {
                 value={companyInput}
                 onChange={(e) => setCompanyInput(e.target.value)}
                 onKeyDown={handleCompanyKeyDown}
-                placeholder="e.g., Stripe, Airbnb, Cloudflare (press Enter to add)"
+                placeholder="All companies (Discover mode) — press Enter to add specific ones"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 disabled={formData.targetCompanies.length >= 15}
               />
-              <p className="text-sm text-gray-500 mt-1">Press Enter to add each company (max 15)</p>
+              <p className="text-sm text-gray-500 mt-1">
+                Leave empty to discover jobs from all monitored companies, or add up to 15 specific
+                targets
+              </p>
             </div>
 
             {/* Error/Success Messages */}

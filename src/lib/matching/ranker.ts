@@ -46,28 +46,32 @@ export function calculateFreshnessScore(daysOld: number): number {
  * @returns Array of ranked jobs sorted by composite score descending, limit 50
  */
 export async function getRankedJobs(userId: string): Promise<RankedJob[]> {
-  // Queue strictly adheres to the user's active criteria (companies + job types).
-  // Company matching is case-insensitive: criteria store tokens like "stripe"
-  // while jobs store display names like "Stripe" (the exact-match version of
-  // this filter emptied the queue and was reverted in 2d21715).
+  // Queue adheres to the user's active criteria (companies + job types).
+  // Empty targetCompanies = "All companies" (discover mode) — the strict
+  // company filter is skipped entirely. Company matching is case-insensitive:
+  // criteria store tokens like "stripe" while jobs store display names like
+  // "Stripe" (the exact-match version of this filter emptied the queue and
+  // was reverted in 2d21715).
   const [activeCriteria] = await db
     .select()
     .from(userCriteria)
     .where(and(eq(userCriteria.userId, userId), eq(userCriteria.isActive, true)))
     .limit(1);
 
-  if (!activeCriteria || activeCriteria.targetCompanies.length === 0) {
+  if (!activeCriteria) {
     return [];
   }
 
-  const jobConditions = [
-    eq(job.isActive, true),
-    eq(job.parseStatus, 'completed'),
-    inArray(
-      sql`lower(${job.company})`,
-      activeCriteria.targetCompanies.map((c) => c.toLowerCase())
-    ),
-  ];
+  const jobConditions = [eq(job.isActive, true), eq(job.parseStatus, 'completed')];
+
+  if (activeCriteria.targetCompanies.length > 0) {
+    jobConditions.push(
+      inArray(
+        sql`lower(${job.company})`,
+        activeCriteria.targetCompanies.map((c) => c.toLowerCase())
+      )
+    );
+  }
 
   // Job type filter: exclude explicit mismatches, keep unknown/unclassified jobs
   if (activeCriteria.jobTypes && activeCriteria.jobTypes.length > 0) {

@@ -11,7 +11,7 @@ const CriteriaInputSchema = z.object({
   jobFunction: z.string().nullable().optional(),
   locations: z.array(z.string()).nullable().optional(),
   visaRequired: z.boolean().nullable().optional(),
-  targetCompanies: z.array(z.string()).min(1).max(15), // 1-15 companies per user decision
+  targetCompanies: z.array(z.string()).max(15), // empty = all companies (discover mode), max 15
   // Job types to match; null or empty = all types
   jobTypes: z
     .array(z.enum(['full_time', 'part_time', 'internship', 'contract']))
