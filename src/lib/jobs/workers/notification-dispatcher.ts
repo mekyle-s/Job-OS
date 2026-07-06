@@ -6,15 +6,11 @@ import { sendHighFitAlert } from '@/lib/email/send-alert';
 import { logParserAudit } from '@/lib/db/queries/audit';
 
 /**
- * Notification dispatcher worker
- * Checks for new high-fit roles for users with active criteria
- * Sends digest emails with up to 10 new roles per user
+ * Check for new high-fit roles for users with active criteria and send
+ * digest emails (up to 10 new roles per user).
+ * Callable directly (serverless-safe) or via the pg-boss wrapper below.
  */
-export async function notificationDispatcherHandler(jobs: Job[]): Promise<void> {
-  // Worker receives array of jobs per DEV-015
-  const pgBossJob = jobs[0];
-  if (!pgBossJob) return;
-
+export async function dispatchNotifications(): Promise<void> {
   try {
     // Get all users with active criteria
     const usersWithCriteria = await db
@@ -132,4 +128,12 @@ export async function notificationDispatcherHandler(jobs: Job[]): Promise<void> 
     // Log error but don't throw - failed notification shouldn't crash worker
     console.error('[notification-dispatcher] Worker error:', error);
   }
+}
+
+/**
+ * pg-boss worker wrapper (used when running with a persistent worker process).
+ */
+export async function notificationDispatcherHandler(jobs: Job[]): Promise<void> {
+  if (!jobs[0]) return;
+  return dispatchNotifications();
 }

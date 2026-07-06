@@ -8,14 +8,14 @@ import {
   markJobsInactive,
   getPendingParseJobs,
 } from '@/lib/db/queries/jobs';
-import { getJobQueue } from '../index';
+import { extractJobRequirements } from './requirement-parser';
 
 export const JOB_POLLER_QUEUE = 'poll-jobs-for-user';
 
-// Hard cap on requirement-extraction jobs queued per poll run. Each extraction
-// is one gpt-4o-mini call, and a discover-mode poll (all boards) can surface
-// hundreds of new jobs at once. Jobs beyond the cap keep parseStatus='pending'
-// and are drained, freshest first, by subsequent hourly polls.
+// Hard cap on requirement extractions per poll run. Each extraction is one
+// gpt-4o-mini call, and a discover-mode poll (all boards) can surface hundreds
+// of new jobs at once. Jobs beyond the cap keep parseStatus='pending' and are
+// drained, freshest first, by subsequent polls.
 const MAX_EXTRACTIONS_PER_POLL = Number(process.env.MAX_EXTRACTIONS_PER_POLL ?? 25);
 
 /**
@@ -42,16 +42,23 @@ interface PollJobsPayload {
   criteriaId: string;
 }
 
-/**
- * Job poller worker
- *
- * Fetches jobs from source adapters for a user's criteria, stores raw + canonical,
- * and queues requirement extraction for new jobs.
- */
-export async function jobPollerHandler(jobs: Job<PollJobsPayload>[]) {
-  const job = jobs[0];
-  const { userId, criteriaId } = job.data;
+export interface PollResult {
+  userId: string;
+  jobsFetched: number;
+  newJobs: number;
+  updatedJobs: number;
+  requirementsExtracted?: number;
+}
 
+/**
+ * Poll job sources for a user's criteria, store raw + canonical jobs, and
+ * extract requirements for pending jobs (capped per run).
+ *
+ * Runs extractions inline (sequential, error-safe) rather than via pg-boss so
+ * it works in serverless environments where background workers don't outlive
+ * the request. Callable directly or via the pg-boss wrapper below.
+ */
+export async function pollJobsForUser(userId: string, criteriaId: string): Promise<PollResult> {
   // 1. Get user criteria from database
   const criteria = await getUserCriteria(userId);
 
@@ -94,9 +101,6 @@ export async function jobPollerHandler(jobs: Job<PollJobsPayload>[]) {
   let newJobs = 0;
   let updatedJobs = 0;
 
-  const boss = getJobQueue();
-  await boss.start(); // Ensure boss is started
-
   // 5. Process each raw job
   for (const rawJob of rawJobs) {
     try {
@@ -110,7 +114,9 @@ export async function jobPollerHandler(jobs: Job<PollJobsPayload>[]) {
       // b. Normalize via adapter
       const canonical = adapter.normalizeJob(rawJob);
 
-      // c. Upsert canonical job (persist role type for multi-tier filtering)
+      // c. Upsert canonical job (persist role type for multi-tier filtering).
+      // New and updated jobs land at parseStatus='pending' and are extracted
+      // below under the per-poll cap.
       const { isNew, isUpdated } = await upsertJob({
         source: canonical.sourceName,
         sourceJobId: canonical.sourceId,
@@ -127,10 +133,6 @@ export async function jobPollerHandler(jobs: Job<PollJobsPayload>[]) {
       });
 
       jobsFetched++;
-
-      // d. Count new/updated jobs. Extraction is NOT queued per job here —
-      // new and updated jobs sit at parseStatus='pending' and are queued
-      // below under the per-poll cap.
       if (isNew) {
         newJobs++;
       } else if (isUpdated) {
@@ -142,18 +144,22 @@ export async function jobPollerHandler(jobs: Job<PollJobsPayload>[]) {
     }
   }
 
-  // 5b. Queue requirement extraction for pending jobs, capped per run.
-  // This drains both this poll's new/updated jobs and any backlog from
-  // earlier capped runs, freshest first.
+  // 5b. Extract requirements for pending jobs, capped per run. This drains
+  // both this poll's new/updated jobs and any backlog from earlier capped
+  // runs, freshest first.
   const pendingJobs = await getPendingParseJobs(MAX_EXTRACTIONS_PER_POLL);
+  let requirementsExtracted = 0;
   for (const pending of pendingJobs) {
-    await boss.send('extract-requirements', {
-      jobId: pending.id,
-      description: pending.description,
-    });
+    try {
+      await extractJobRequirements(pending.id, pending.description);
+      requirementsExtracted++;
+    } catch (error) {
+      console.error(`[JobPoller] Requirement extraction failed for job ${pending.id}:`, error);
+      // extractJobRequirements already marked the job 'failed'; continue
+    }
   }
   console.log(
-    `[JobPoller] Queued ${pendingJobs.length} requirement extractions (cap: ${MAX_EXTRACTIONS_PER_POLL})`
+    `[JobPoller] Extracted requirements for ${requirementsExtracted}/${pendingJobs.length} pending jobs (cap: ${MAX_EXTRACTIONS_PER_POLL})`
   );
 
   // 6. Mark missing jobs as inactive
@@ -193,5 +199,15 @@ export async function jobPollerHandler(jobs: Job<PollJobsPayload>[]) {
     jobsFetched,
     newJobs,
     updatedJobs,
+    requirementsExtracted,
   };
+}
+
+/**
+ * pg-boss worker wrapper (used when running with a persistent worker process).
+ */
+export async function jobPollerHandler(jobs: Job<PollJobsPayload>[]) {
+  const job = jobs[0];
+  const { userId, criteriaId } = job.data;
+  return pollJobsForUser(userId, criteriaId);
 }

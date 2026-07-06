@@ -24,6 +24,7 @@ export async function createEvidenceSource(data: {
   fileUrl?: string;
   fileSize?: number;
   mimeType?: string;
+  rawText?: string;
 }): Promise<EvidenceSource> {
   const id = crypto.randomUUID();
 
@@ -37,6 +38,7 @@ export async function createEvidenceSource(data: {
       fileUrl: data.fileUrl,
       fileSize: data.fileSize,
       mimeType: data.mimeType,
+      rawText: data.rawText,
       parseStatus: 'pending',
     })
     .returning();

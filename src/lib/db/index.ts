@@ -4,9 +4,12 @@ import * as schema from './schema';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  max: 20,
+  // Keep the per-instance pool small in serverless: many concurrent function
+  // instances each hold their own pool. Use a pooled connection string
+  // (e.g. Neon's -pooler endpoint) in production.
+  max: process.env.VERCEL ? 5 : 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 10000,
 });
 
 pool.on('error', (err) => {

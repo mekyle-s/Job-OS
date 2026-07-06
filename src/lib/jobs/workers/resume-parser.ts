@@ -16,10 +16,19 @@ interface ResumeParsePayload {
   userId: string;
 }
 
-export async function resumeParserHandler(jobs: Job<ResumeParsePayload>[]) {
-  const job = jobs[0];
-  const { sourceId, userId } = job.data;
-
+/**
+ * Parse an uploaded resume source into Evidence Bank items.
+ *
+ * Text is read from the source's rawText column (stored at upload time —
+ * serverless-safe, no filesystem dependency). Falls back to reading the file
+ * from disk for legacy sources that only have a fileUrl.
+ *
+ * Callable directly or via the pg-boss worker wrapper below.
+ */
+export async function processResumeSource(
+  sourceId: string,
+  userId: string
+): Promise<{ success: boolean; itemCount: number }> {
   // 1. Get the source record
   const source = await getEvidenceSourceById(sourceId);
   if (!source) throw new Error(`Source ${sourceId} not found`);
@@ -28,28 +37,31 @@ export async function resumeParserHandler(jobs: Job<ResumeParsePayload>[]) {
   await updateEvidenceSourceStatus(sourceId, 'processing');
 
   try {
-    // 3. Read file from disk (MVP: local storage in uploads/ dir)
-    const filePath = source.fileUrl;
-    if (!filePath) throw new Error('No file URL for source');
+    // 3. Get resume text: prefer rawText stored at upload; fall back to
+    // reading the file from local disk (legacy/local-dev sources)
+    let text = source.rawText;
 
-    const fs = await import('fs/promises');
-    const buffer = await fs.readFile(filePath);
+    if (!text) {
+      const filePath = source.fileUrl;
+      if (!filePath) throw new Error('No raw text or file URL for source');
 
-    // 4. Extract text based on mime type
-    let text: string;
-    if (source.mimeType === 'application/pdf') {
-      text = await extractTextFromPDF(buffer);
-    } else {
-      text = await extractTextFromDOCX(buffer);
+      const fs = await import('fs/promises');
+      const buffer = await fs.readFile(filePath);
+
+      if (source.mimeType === 'application/pdf') {
+        text = await extractTextFromPDF(buffer);
+      } else {
+        text = await extractTextFromDOCX(buffer);
+      }
+
+      // Store raw text on source
+      await updateEvidenceSourceStatus(sourceId, 'processing', undefined, text);
     }
 
-    // 5. Store raw text on source
-    await updateEvidenceSourceStatus(sourceId, 'processing', undefined, text);
-
-    // 6. Parse with LLM
+    // 4. Parse with LLM
     const evidence = await parseResumeText(text);
 
-    // 7. Convert parsed evidence to database items
+    // 5. Convert parsed evidence to database items
     const items: Array<{
       userId: string;
       sourceId: string;
@@ -145,7 +157,7 @@ export async function resumeParserHandler(jobs: Job<ResumeParsePayload>[]) {
       });
     }
 
-    // 8. Generate embeddings for all items in a single batched API call so
+    // 6. Generate embeddings for all items in a single batched API call so
     // they are immediately usable by the semantic matching pipeline.
     // Best-effort: an embedding failure must not lose the parsed evidence.
     if (items.length > 0) {
@@ -165,13 +177,22 @@ export async function resumeParserHandler(jobs: Job<ResumeParsePayload>[]) {
       await createManyEvidenceItems(items);
     }
 
-    // 9. Mark source as completed
+    // 7. Mark source as completed
     await updateEvidenceSourceStatus(sourceId, 'completed');
 
     return { success: true, itemCount: items.length };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown parsing error';
     await updateEvidenceSourceStatus(sourceId, 'failed', message);
-    throw error; // Re-throw so pg-boss can handle retry
+    throw error;
   }
+}
+
+/**
+ * pg-boss worker wrapper (used when running with a persistent worker process).
+ */
+export async function resumeParserHandler(jobs: Job<ResumeParsePayload>[]) {
+  const job = jobs[0];
+  const { sourceId, userId } = job.data;
+  return processResumeSource(sourceId, userId);
 }

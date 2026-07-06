@@ -9,6 +9,9 @@ import { z } from 'zod';
 // POST /api/matching/run - Trigger matching for a job
 // ============================================================
 
+// Matching runs capped LLM validations (MAX_EVALUATIONS_PER_RUN) in-request
+export const maxDuration = 300;
+
 const RequestSchema = z.object({
   jobId: z.string(),
 });
@@ -45,10 +48,7 @@ export async function POST(request: Request) {
     const requirements = await db.select().from(requirement).where(eq(requirement.jobId, jobId));
 
     if (requirements.length === 0) {
-      return Response.json(
-        { error: 'Job has no extracted requirements' },
-        { status: 400 }
-      );
+      return Response.json({ error: 'Job has no extracted requirements' }, { status: 400 });
     }
 
     // Run matching pipeline
