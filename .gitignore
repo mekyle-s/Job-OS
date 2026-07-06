@@ -45,3 +45,4 @@ postgres_data
 
 # uploads
 uploads/
+.env*
