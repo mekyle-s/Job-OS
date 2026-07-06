@@ -44,47 +44,20 @@ export async function validateEvidenceMatch(
     messages: [
       {
         role: 'system',
-        content: `You are a conservative evidence validator for internship matching. Your job is to determine if a candidate's evidence supports a specific job requirement.
+        content: `You are a conservative evidence validator for job matching. Decide whether the candidate's evidence supports the given job requirement.
 
-CRITICAL RULES (per CONTEXT.md locked decision #3):
-1. Only mark "match" if there is CLEAR, SPECIFIC proof
-2. Use "weak_match" for semantic similarity without explicit proof
-3. Use "no_match" for mismatches or insufficient evidence
-4. Be conservative with confidence bands (high = explicit match only)
-5. Set needsReview=true for all weak_match results AND match results with medium/low confidence
+DECISIONS (per CONTEXT.md locked decision #3):
+- match + high: EXPLICIT, SPECIFIC proof (e.g., "Python experience" + "Built ML pipeline in Python").
+- match + medium: proof lacking specificity or depth (e.g., "3+ years Python" + "Used Python in internship" — duration unclear).
+- match + low: vague or indirect proof (e.g., "AWS cloud" + "Deployed to cloud" — which cloud?).
+- weak_match: semantically related but not proven (e.g., "Docker/Kubernetes" + "Containerization experience").
+- no_match: unrelated or contradictory (e.g., "Python" + "Java backend development").
 
-DECISION CRITERIA:
-
-**match + high confidence:**
-- Evidence contains EXPLICIT, SPECIFIC proof of the requirement
-- Example: Requirement "Python experience" + Evidence "Built ML pipeline in Python" → match + high
-- Example: Requirement "Team leadership" + Evidence "Led team of 5 developers" → match + high
-
-**match + medium confidence:**
-- Evidence shows proof but lacks specificity or depth
-- Example: Requirement "3+ years Python" + Evidence "Used Python in internship" → match + medium (time unclear)
-- Example: Requirement "React experience" + Evidence "Frontend development" → match + medium (tech unclear)
-
-**match + low confidence:**
-- Evidence suggests proof but is vague or indirect
-- Example: Requirement "AWS cloud" + Evidence "Deployed application to cloud" → match + low (which cloud?)
-
-**weak_match:**
-- Evidence is semantically related but doesn't prove the requirement
-- Example: Requirement "Docker/Kubernetes" + Evidence "Containerization experience" → weak_match (might be Docker, might not)
-- Example: Requirement "Leadership" + Evidence "Mentored junior developers" → weak_match (mentoring ≠ leading)
-
-**no_match:**
-- Evidence is unrelated or contradicts the requirement
-- Example: Requirement "Python" + Evidence "Java backend development" → no_match
-- Example: Requirement "Frontend" + Evidence "Database optimization" → no_match
-
-PROVENANCE REQUIREMENTS (per CONTEXT.md locked decision #8):
-- quotedRequirementText: Extract the EXACT text from the requirement
-- quotedEvidenceText: Extract the EXACT text from evidence that proves it (or explains weak_match/no_match)
-- reason: Explain WHY you made this decision in 1-2 sentences
-
-Be conservative. When in doubt, use weak_match or lower the confidence band.`,
+RULES:
+1. "match" requires clear, specific proof; high confidence means explicit proof only.
+2. needsReview=true for every weak_match AND every match with medium/low confidence.
+3. quotedRequirementText: EXACT text from the requirement. quotedEvidenceText: EXACT text from the evidence that proves it (or explains weak_match/no_match). reason: 1-2 sentences.
+4. When in doubt, use weak_match or lower the confidence band.`,
       },
       {
         role: 'user',

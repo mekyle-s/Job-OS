@@ -7,6 +7,25 @@ import { getJobQueue } from '../index';
 
 export const JOB_POLLER_QUEUE = 'poll-jobs-for-user';
 
+/**
+ * Map adapter employment type strings ('full-time', 'part-time', 'internship',
+ * 'contract') to canonical job.roleType values used by filtering.
+ */
+function normalizeRoleType(employmentType?: string): string {
+  switch (employmentType) {
+    case 'internship':
+      return 'internship';
+    case 'part-time':
+      return 'part_time';
+    case 'full-time':
+      return 'full_time';
+    case 'contract':
+      return 'contract';
+    default:
+      return 'unknown';
+  }
+}
+
 interface PollJobsPayload {
   userId: string;
   criteriaId: string;
@@ -73,7 +92,7 @@ export async function jobPollerHandler(jobs: Job<PollJobsPayload>[]) {
       // b. Normalize via adapter
       const canonical = adapter.normalizeJob(rawJob);
 
-      // c. Upsert canonical job
+      // c. Upsert canonical job (persist role type for multi-tier filtering)
       const {
         job: canonicalJob,
         isNew,
@@ -89,6 +108,7 @@ export async function jobPollerHandler(jobs: Job<PollJobsPayload>[]) {
         postedAt: canonical.postedAt ? new Date(canonical.postedAt) : undefined,
         sourceUpdatedAt: new Date(canonical.updatedAt),
         metadata: canonical.metadata,
+        roleType: normalizeRoleType(canonical.metadata?.employmentType),
         isActive: true,
       });
 

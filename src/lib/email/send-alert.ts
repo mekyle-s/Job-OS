@@ -40,7 +40,7 @@ export async function sendHighFitAlert(
 
   try {
     const { data, error } = await resend.emails.send({
-      from: process.env.EMAIL_FROM || 'Internship OS <onboarding@resend.dev>',
+      from: process.env.EMAIL_FROM || 'Job OS <onboarding@resend.dev>',
       to: userEmail,
       subject: `${roles.length} New High-Fit Role${roles.length > 1 ? 's' : ''} Available`,
       react: HighFitAlertEmail({ userName, roles }),

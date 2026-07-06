@@ -113,6 +113,7 @@ export async function createEvidenceItem(data: {
   };
   confidence?: number;
   isManual?: boolean;
+  embedding?: number[];
 }): Promise<EvidenceItem> {
   const id = crypto.randomUUID();
 
@@ -131,6 +132,7 @@ export async function createEvidenceItem(data: {
       metadata: data.metadata,
       confidence: data.confidence ?? 1.0,
       isManual: data.isManual ?? true,
+      embedding: data.embedding,
     })
     .returning();
 
@@ -160,6 +162,7 @@ export async function createManyEvidenceItems(
     };
     confidence?: number;
     isManual?: boolean;
+    embedding?: number[];
   }>
 ): Promise<EvidenceItem[]> {
   const itemsWithIds = items.map((item) => ({
@@ -175,6 +178,7 @@ export async function createManyEvidenceItems(
     metadata: item.metadata,
     confidence: item.confidence ?? 1.0,
     isManual: item.isManual ?? false,
+    embedding: item.embedding,
   }));
 
   const insertedItems = await db.insert(evidenceItem).values(itemsWithIds).returning();
@@ -232,6 +236,7 @@ export async function updateEvidenceItem(
     };
     confidence?: number;
     isManual?: boolean;
+    embedding?: number[];
   }
 ): Promise<EvidenceItem | undefined> {
   const [item] = await db

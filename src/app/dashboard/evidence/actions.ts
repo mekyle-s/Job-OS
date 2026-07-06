@@ -1,10 +1,34 @@
 'use server';
 
 import { requireUser } from '@/lib/auth/session';
-import { createEvidenceItem, updateEvidenceItem, deleteEvidenceItem } from '@/lib/db/queries/evidence';
+import {
+  createEvidenceItem,
+  updateEvidenceItem,
+  deleteEvidenceItem,
+} from '@/lib/db/queries/evidence';
 import { EvidenceItemCreateSchema, EvidenceItemUpdateSchema } from '@/lib/schemas/evidence';
+import { generateEvidenceEmbedding } from '@/lib/matching/embedder';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+
+/**
+ * Best-effort embedding generation for manual evidence.
+ * Items without embeddings are skipped by semantic matching, so we embed at
+ * save time — but an embedding failure must never block the save itself.
+ */
+async function tryGenerateEmbedding(item: {
+  title: string;
+  content?: string | null;
+  company?: string | null;
+  metadata?: { skills?: string[]; technologies?: string[]; achievements?: string[] } | null;
+}): Promise<number[] | undefined> {
+  try {
+    return await generateEvidenceEmbedding(item);
+  } catch (error) {
+    console.error('[Evidence] Embedding generation failed, saving without embedding:', error);
+    return undefined;
+  }
+}
 
 /**
  * Server Action: Create a new evidence item
@@ -50,10 +74,12 @@ export async function createEvidenceAction(formData: FormData) {
     return { error: result.error.issues.map((e) => e.message).join(', ') };
   }
 
-  // Create evidence item
+  // Create evidence item (embed so it participates in semantic matching)
+  const embedding = await tryGenerateEmbedding(result.data);
   await createEvidenceItem({
     userId: user.id,
     ...result.data,
+    embedding,
   });
 
   revalidatePath('/dashboard/evidence');
@@ -104,8 +130,17 @@ export async function updateEvidenceAction(formData: FormData) {
     return { error: result.error.issues.map((e) => e.message).join(', ') };
   }
 
-  // Update evidence item
-  await updateEvidenceItem(id, user.id, result.data);
+  // Update evidence item (re-embed when the searchable text changed)
+  const embedding =
+    result.data.title || result.data.content || result.data.metadata
+      ? await tryGenerateEmbedding({
+          title: result.data.title ?? rawData.title,
+          content: result.data.content,
+          company: result.data.company,
+          metadata: result.data.metadata,
+        })
+      : undefined;
+  await updateEvidenceItem(id, user.id, { ...result.data, embedding });
 
   revalidatePath('/dashboard/evidence');
   redirect('/dashboard/evidence');

@@ -199,11 +199,23 @@ export class GreenhouseAdapter implements JobSource {
   private detectEmploymentType(title: string): string {
     const lowerTitle = title.toLowerCase();
 
-    if (lowerTitle.includes('intern')) {
+    // "intern" as its own word (avoid matching "internal", "international")
+    if (
+      /\bintern(ship)?s?\b/.test(lowerTitle) ||
+      lowerTitle.includes('co-op') ||
+      lowerTitle.includes('coop')
+    ) {
       return 'internship';
     }
     if (lowerTitle.includes('part-time') || lowerTitle.includes('part time')) {
       return 'part-time';
+    }
+    if (
+      lowerTitle.includes('contract') ||
+      lowerTitle.includes('contractor') ||
+      lowerTitle.includes('temporary')
+    ) {
+      return 'contract';
     }
     return 'full-time';
   }

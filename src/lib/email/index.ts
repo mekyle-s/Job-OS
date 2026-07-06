@@ -11,7 +11,7 @@ export async function sendPasswordResetEmail(email: string, resetUrl: string) {
 
   // Don't await to prevent timing attacks that reveal valid emails
   void resend.emails.send({
-    from: process.env.EMAIL_FROM || 'Internship OS <onboarding@resend.dev>',
+    from: process.env.EMAIL_FROM || 'Job OS <onboarding@resend.dev>',
     to: email,
     subject: 'Reset your password',
     html: `

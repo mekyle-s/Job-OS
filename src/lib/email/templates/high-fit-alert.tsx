@@ -49,7 +49,7 @@ export function HighFitAlertEmail({ userName, roles }: HighFitAlertEmailProps) {
           ))}
 
           <Text style={footer}>
-            You received this because you have active criteria. Manage your alerts in Internship OS.
+            You received this because you have active criteria. Manage your alerts in Job OS.
           </Text>
         </Container>
       </Body>

@@ -160,6 +160,9 @@ function RoleCardWithFilter({ job, statusFilter }: { job: RankedJob; statusFilte
     if (statusFilter === 'all') return true;
     // Show card while loading to avoid flash-of-empty
     if (isLoading) return true;
+    // Freshly matched roles have no status yet — they match the 'new' filter
+    // (previously any non-'all' filter hid every unstatused role)
+    if (statusFilter === 'new') return roleStatus?.status == null;
     // Once loaded, compare actual status to filter
     return roleStatus?.status === statusFilter;
   };

@@ -36,11 +36,22 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') ?? '0', 10);
     const active = searchParams.get('active') !== 'false'; // Default to true
 
+    // Optional filters: explicit query params override the user's saved job types
+    const jobTypeParam = searchParams.get('jobType');
+    const validJobTypes = ['full_time', 'part_time', 'internship', 'contract'];
+    const jobTypes =
+      jobTypeParam && validJobTypes.includes(jobTypeParam)
+        ? [jobTypeParam]
+        : (criteria.jobTypes ?? undefined);
+    const company = searchParams.get('company') ?? undefined;
+
     // Get jobs for user's target companies
     const jobs = await getJobsForUser(criteria.targetCompanies, {
       limit,
       offset,
       isActive: active,
+      jobTypes,
+      company,
     });
 
     return Response.json({
