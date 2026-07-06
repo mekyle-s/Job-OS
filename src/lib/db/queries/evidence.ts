@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { evidenceSource, evidenceItem } from '@/lib/db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, inArray } from 'drizzle-orm';
 import type { InferSelectModel } from 'drizzle-orm';
 
 // ============================================================
@@ -67,6 +67,31 @@ export async function updateEvidenceSourceStatus(
     .returning();
 
   return source;
+}
+
+/**
+ * Delete all resume-derived (non-manual) evidence items for a user.
+ * Called when a new resume is uploaded so re-uploads replace prior parses
+ * instead of duplicating them. Manual items are preserved; evidence
+ * mappings cascade-delete with their items.
+ */
+export async function deleteParsedResumeEvidence(userId: string): Promise<number> {
+  const resumeSourceIds = db
+    .select({ id: evidenceSource.id })
+    .from(evidenceSource)
+    .where(and(eq(evidenceSource.userId, userId), eq(evidenceSource.sourceType, 'resume')));
+
+  const result = await db
+    .delete(evidenceItem)
+    .where(
+      and(
+        eq(evidenceItem.userId, userId),
+        eq(evidenceItem.isManual, false),
+        inArray(evidenceItem.sourceId, resumeSourceIds)
+      )
+    );
+
+  return result.rowCount ?? 0;
 }
 
 /**

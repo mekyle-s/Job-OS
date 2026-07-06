@@ -2,22 +2,25 @@
 
 @source "../**/*.{js,ts,jsx,tsx}";
 
+/* The app is designed light-only: no dark-mode variable flip, otherwise
+   inputs inherit a near-white text color on white backgrounds when the OS
+   is in dark mode. */
 :root {
   --background: #ffffff;
   --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Form fields always render dark text on their light backgrounds */
+input,
+textarea,
+select {
+  color: #111827; /* gray-900 */
 }
 
 @layer utilities {

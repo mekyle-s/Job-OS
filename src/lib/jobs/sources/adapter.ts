@@ -16,6 +16,7 @@ export interface UserCriteriaInput {
 export interface RawJobData {
   sourceId: string; // ID from the source API
   sourceName: string; // 'greenhouse' | 'lever'
+  company?: string; // Canonical company display name (known at fetch time)
   rawData: unknown; // Complete source response preserved
 }
 
@@ -41,8 +42,11 @@ export interface CanonicalJob {
 export interface JobSource {
   name: string;
 
-  /** All company names this source can poll (used for "All companies" discover mode) */
+  /** Companies polled in "All companies" discover mode */
   getMonitoredCompanies(): string[];
+
+  /** Canonical display name stored on jobs for a company (must be deterministic) */
+  getCompanyDisplayName(companyName: string): string;
 
   /** Fetch jobs matching user criteria from this source */
   fetchJobs(criteria: UserCriteriaInput): Promise<RawJobData[]>;
@@ -51,5 +55,5 @@ export interface JobSource {
   normalizeJob(rawJob: RawJobData): CanonicalJob;
 
   /** Get all active source job IDs for a company (for inactive detection) */
-  getActiveJobIds(boardToken: string): Promise<string[]>;
+  getActiveJobIds(companyName: string): Promise<string[]>;
 }

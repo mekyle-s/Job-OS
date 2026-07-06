@@ -167,20 +167,13 @@ export async function pollJobsForUser(userId: string, criteriaId: string): Promi
   // CRITICAL: Must pass company name to scope the inactive marking to that company only
   for (const companyName of companiesToPoll) {
     try {
-      // Greenhouse uses lowercase company names as board tokens
-      const boardToken = companyName.toLowerCase();
-      const activeJobIds = await adapter.getActiveJobIds(boardToken);
+      const activeJobIds = await adapter.getActiveJobIds(companyName);
 
       if (activeJobIds.length > 0) {
-        // Normalize company name to match how it's stored in database
-        // Database stores capitalized company names (e.g., "Airbnb", "Stripe")
-        const normalizedCompanyName =
-          companyName.charAt(0).toUpperCase() + companyName.slice(1).toLowerCase();
-        const markedInactive = await markJobsInactive(
-          'greenhouse',
-          normalizedCompanyName,
-          activeJobIds
-        );
+        // Use the same display name the adapter stores on jobs, so the
+        // inactive-marking is scoped to exactly the right rows
+        const displayName = adapter.getCompanyDisplayName(companyName);
+        const markedInactive = await markJobsInactive('greenhouse', displayName, activeJobIds);
         if (markedInactive > 0) {
           console.log(`[JobPoller] Marked ${markedInactive} jobs inactive for ${companyName}`);
         }

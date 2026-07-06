@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { after } from 'next/server';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
-import { createEvidenceSource } from '@/lib/db/queries/evidence';
+import { createEvidenceSource, deleteParsedResumeEvidence } from '@/lib/db/queries/evidence';
 import { processResumeSource } from '@/lib/jobs/workers/resume-parser';
 import { extractTextFromPDF } from '@/lib/parsers/pdf-extractor';
 import { extractTextFromDOCX } from '@/lib/parsers/docx-extractor';
@@ -59,7 +59,13 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'Could not extract any text from the file.' }, { status: 400 });
     }
 
-    // 6. Create evidenceSource record with the extracted text
+    // 6. Re-uploads replace prior resume-derived evidence (manual items kept)
+    const removed = await deleteParsedResumeEvidence(userId);
+    if (removed > 0) {
+      console.log(`[Upload] Replaced ${removed} evidence items from previous resume uploads`);
+    }
+
+    // 7. Create evidenceSource record with the extracted text
     const source = await createEvidenceSource({
       userId,
       sourceType: 'resume',
@@ -69,7 +75,7 @@ export async function POST(request: NextRequest) {
       rawText,
     });
 
-    // 7. Parse after the response is sent (LLM extraction + embeddings).
+    // 8. Parse after the response is sent (LLM extraction + embeddings).
     // after() keeps the serverless function alive past the response, so this
     // works on Vercel where background queue workers would be frozen.
     after(async () => {
@@ -81,7 +87,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // 8. Return success response (client polls /api/evidence/status/[sourceId])
+    // 9. Return success response (client polls /api/evidence/status/[sourceId])
     return Response.json({
       sourceId: source.id,
       status: 'queued',

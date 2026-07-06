@@ -53,31 +53,61 @@ export class GreenhouseAdapter implements JobSource {
   name = 'greenhouse';
   private baseUrl = 'https://boards-api.greenhouse.io/v1/boards';
 
-  // Company name → Greenhouse board token mapping
-  // Board tokens are URL slugs from boards.greenhouse.io/{token}
-  private boardTokens: Record<string, string> = {
-    airbnb: 'airbnb',
-    stripe: 'stripe',
-    figma: 'figma',
-    notion: 'notion',
-    twitch: 'twitch',
-    cloudflare: 'cloudflare',
-    discord: 'discord',
-    databricks: 'databricks',
-    plaid: 'plaid',
-    ramp: 'ramp',
-    airtable: 'airtable',
-    webflow: 'webflow',
-    spotify: 'spotify',
-    asana: 'asana',
-    duolingo: 'duolingo',
-  };
+  // Known companies with public Greenhouse boards, polled in discover mode
+  // (no target companies set). Keys are display names; board tokens derive
+  // from the name via resolveBoardToken.
+  private discoverCompanies = [
+    'Airbnb',
+    'Stripe',
+    'Figma',
+    'Notion',
+    'Twitch',
+    'Cloudflare',
+    'Discord',
+    'Databricks',
+    'Plaid',
+    'Ramp',
+    'Airtable',
+    'Webflow',
+    'Spotify',
+    'Asana',
+    'Duolingo',
+  ];
 
   /**
-   * All companies this adapter can poll (discover mode polls every board)
+   * All companies this adapter polls in discover mode
    */
   getMonitoredCompanies(): string[] {
-    return Object.keys(this.boardTokens);
+    return this.discoverCompanies;
+  }
+
+  /**
+   * Derive a Greenhouse board token from a company name.
+   * Tokens are URL slugs (boards.greenhouse.io/{token}) — lowercase
+   * alphanumerics, so "Scale AI" → "scaleai". Any company with a public
+   * Greenhouse board can be targeted; boards that don't exist return 404
+   * at fetch time and are skipped with a warning.
+   */
+  resolveBoardToken(companyName: string): string {
+    return companyName.toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  /**
+   * Canonical display name stored on jobs for this company.
+   * Known discover companies keep their proper casing; anything else is
+   * title-cased from the user's input. Must be deterministic — the poller
+   * uses the same value when marking missing jobs inactive.
+   */
+  getCompanyDisplayName(companyName: string): string {
+    const known = this.discoverCompanies.find(
+      (c) => this.resolveBoardToken(c) === this.resolveBoardToken(companyName)
+    );
+    if (known) return known;
+    return companyName
+      .trim()
+      .split(/\s+/)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
   }
 
   /**
@@ -90,11 +120,8 @@ export class GreenhouseAdapter implements JobSource {
 
     // Process companies sequentially to avoid rate limits
     for (const companyName of criteria.targetCompanies) {
-      const boardToken = this.boardTokens[companyName.toLowerCase()];
-      if (!boardToken) {
-        console.warn(`[Greenhouse] No board token for company: ${companyName}`);
-        continue;
-      }
+      const boardToken = this.resolveBoardToken(companyName);
+      const displayName = this.getCompanyDisplayName(companyName);
 
       try {
         const jobs = await this.fetchCompanyJobs(boardToken);
@@ -122,16 +149,24 @@ export class GreenhouseAdapter implements JobSource {
           return true;
         });
 
-        // Convert to RawJobData format
+        // Convert to RawJobData format (company carries the display name so
+        // normalizeJob doesn't have to guess it from the payload)
         for (const job of filteredJobs) {
           allJobs.push({
             sourceId: String(job.id),
             sourceName: 'greenhouse',
+            company: displayName,
             rawData: job,
           });
         }
       } catch (error) {
-        console.error(`[Greenhouse] Failed to fetch jobs for ${companyName}:`, error);
+        if (error instanceof Error && error.message.includes('404')) {
+          console.warn(
+            `[Greenhouse] No public board found for "${companyName}" (token: ${boardToken}) — company may not use Greenhouse`
+          );
+        } else {
+          console.error(`[Greenhouse] Failed to fetch jobs for ${companyName}:`, error);
+        }
         // Continue to next company on error
       }
     }
@@ -170,8 +205,9 @@ export class GreenhouseAdapter implements JobSource {
   normalizeJob(rawJob: RawJobData): CanonicalJob {
     const job = rawJob.rawData as any;
 
-    // Reverse lookup company name from board token
-    const company = this.getCompanyName(job);
+    // Company display name is carried on RawJobData from fetch time;
+    // fall back to the legacy payload heuristic for old records
+    const company = rawJob.company ?? this.getCompanyName(job);
 
     // Detect employment type from title
     const employmentType = this.detectEmploymentType(job.title);
@@ -199,11 +235,12 @@ export class GreenhouseAdapter implements JobSource {
   }
 
   /**
-   * Get all active job IDs for a company board
+   * Get all active job IDs for a company
    *
    * Used for inactive detection - fetches without content for speed
    */
-  async getActiveJobIds(boardToken: string): Promise<string[]> {
+  async getActiveJobIds(companyName: string): Promise<string[]> {
+    const boardToken = this.resolveBoardToken(companyName);
     try {
       const url = `${this.baseUrl}/${boardToken}/jobs`;
       const response = await fetch(url);
@@ -222,23 +259,18 @@ export class GreenhouseAdapter implements JobSource {
   }
 
   /**
-   * Reverse lookup company name from job metadata
-   *
-   * Uses board token mapping or job metadata
+   * Legacy fallback: guess company name from job payload when RawJobData
+   * doesn't carry it (records fetched before company was passed through)
    */
   private getCompanyName(job: any): string {
-    // Try to find company name from metadata
     if (job.metadata?.company) {
       return job.metadata.company;
     }
 
-    // Reverse lookup from board tokens
-    // Note: This is a heuristic - in production we'd pass board token through
-    for (const [companyName, token] of Object.entries(this.boardTokens)) {
-      // Check if job data hints at the company
-      const jobStr = JSON.stringify(job).toLowerCase();
-      if (jobStr.includes(companyName)) {
-        return companyName.charAt(0).toUpperCase() + companyName.slice(1);
+    const jobStr = JSON.stringify(job).toLowerCase();
+    for (const displayName of this.discoverCompanies) {
+      if (jobStr.includes(displayName.toLowerCase())) {
+        return displayName;
       }
     }
 

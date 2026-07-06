@@ -318,8 +318,8 @@ export default function CriteriaPage() {
                 disabled={formData.targetCompanies.length >= 15}
               />
               <p className="text-sm text-gray-500 mt-1">
-                Leave empty to discover jobs from all monitored companies, or add up to 15 specific
-                targets
+                Any company with a public Greenhouse job board works (e.g., Anthropic, Databricks,
+                Stripe). Leave empty to discover across popular boards, or add up to 15 targets.
               </p>
             </div>
 
@@ -351,9 +351,9 @@ export default function CriteriaPage() {
           {/* Source Transparency Notice */}
           <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-sm text-yellow-800">
-              <strong>Note:</strong> We currently monitor Greenhouse job boards. Not all companies
-              use Greenhouse — your target companies will only show results if they post jobs on
-              Greenhouse.
+              <strong>Note:</strong> We currently source jobs from Greenhouse job boards. A target
+              company will only return results if it hosts a public board on Greenhouse
+              (boards.greenhouse.io).
             </p>
           </div>
         </div>
