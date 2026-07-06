@@ -23,8 +23,11 @@ export function middleware(request: NextRequest) {
   }
 
   // Check for session cookie presence (optimistic check for UX)
-  // Better Auth uses 'better-auth.session_token' cookie
-  const hasSessionCookie = request.cookies.has('better-auth.session_token');
+  // Better Auth uses 'better-auth.session_token' on HTTP (local dev) and
+  // prefixes it with '__Secure-' on HTTPS (production)
+  const hasSessionCookie =
+    request.cookies.has('better-auth.session_token') ||
+    request.cookies.has('__Secure-better-auth.session_token');
 
   // Redirect to sign-in if accessing protected route without session cookie (UX)
   if (isProtected && !hasSessionCookie) {
