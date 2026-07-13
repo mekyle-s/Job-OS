@@ -5,6 +5,11 @@ auth guards, cron endpoints, file upload, server actions, Greenhouse fetcher, ra
 SQL usage, CI/config. A wider 10-agent review was cut short at the 5-minute mark,
 so the areas listed under "Not reviewed" have had no completed pass.
 
+> **Update:** all four findings below were fixed on this branch in the follow-up
+> commit — cron endpoints fail closed, resume evidence is replaced transactionally
+> at insert time, upload 500s no longer echo internals, and a vitest suite now
+> runs in CI (`npm test`).
+
 ## Findings
 
 ### 1. Cron endpoints accept `Bearer undefined` if `CRON_SECRET` is unset — medium

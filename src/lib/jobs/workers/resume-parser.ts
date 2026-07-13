@@ -5,7 +5,8 @@ import { parseResumeText } from '@/lib/parsers/evidence-parser';
 import {
   getEvidenceSourceById,
   updateEvidenceSourceStatus,
-  createManyEvidenceItems,
+  replaceParsedResumeEvidence,
+  type EvidenceItemInput,
 } from '@/lib/db/queries/evidence';
 import { generateBatchEmbeddings, buildEvidenceEmbeddingText } from '@/lib/matching/embedder';
 
@@ -62,27 +63,7 @@ export async function processResumeSource(
     const evidence = await parseResumeText(text);
 
     // 5. Convert parsed evidence to database items
-    const items: Array<{
-      userId: string;
-      sourceId: string;
-      itemType: 'experience' | 'project' | 'skill' | 'education';
-      title: string;
-      company?: string;
-      startDate?: string;
-      endDate?: string;
-      content?: string;
-      metadata?: {
-        skills?: string[];
-        technologies?: string[];
-        achievements?: string[];
-        links?: { type: string; url: string }[];
-        location?: string;
-        gpa?: string;
-      };
-      confidence: number;
-      isManual: boolean;
-      embedding?: number[];
-    }> = [];
+    const items: EvidenceItemInput[] = [];
 
     for (const exp of evidence.experiences) {
       items.push({
@@ -174,7 +155,15 @@ export async function processResumeSource(
         );
       }
 
-      await createManyEvidenceItems(items);
+      // Replace prior resume-derived evidence in the same transaction as the
+      // insert: re-uploads never duplicate items, and a failure anywhere
+      // leaves the previous evidence untouched (no delete-then-crash window).
+      const { removed } = await replaceParsedResumeEvidence(userId, items);
+      if (removed > 0) {
+        console.log(
+          `[ResumeParser] Replaced ${removed} evidence items from previous resume uploads`
+        );
+      }
     }
 
     // 7. Mark source as completed
