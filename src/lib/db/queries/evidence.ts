@@ -10,10 +10,12 @@ import type { InferSelectModel } from 'drizzle-orm';
 export type EvidenceSource = InferSelectModel<typeof evidenceSource>;
 export type EvidenceItem = InferSelectModel<typeof evidenceItem>;
 
+export type EvidenceItemType = 'experience' | 'project' | 'skill' | 'education';
+
 export type EvidenceItemInput = {
   userId: string;
   sourceId?: string;
-  itemType: string;
+  itemType: EvidenceItemType;
   title: string;
   company?: string;
   startDate?: string;
@@ -218,18 +220,6 @@ function withInsertDefaults(item: EvidenceItemInput) {
     isManual: item.isManual ?? false,
     embedding: item.embedding,
   };
-}
-
-/**
- * Batch insert multiple evidence items (for parsed resume data)
- */
-export async function createManyEvidenceItems(items: EvidenceItemInput[]): Promise<EvidenceItem[]> {
-  const insertedItems = await db
-    .insert(evidenceItem)
-    .values(items.map(withInsertDefaults))
-    .returning();
-
-  return insertedItems;
 }
 
 /**

@@ -42,7 +42,9 @@ export default function RoleBriefPage() {
     );
   }
 
-  if (error || !brief) {
+  // Full error screen ONLY when there is no cached brief. A failed background
+  // refetch keeps the last good data — render it rather than discarding it.
+  if (!brief) {
     return (
       <div className="min-h-screen bg-gray-50">
         <header className="bg-white shadow-sm">

@@ -3,7 +3,11 @@ import {
   getEvidenceMappingsForJob,
   createEvidenceMapping,
 } from '@/lib/db/queries/evidence-mapping';
+import { getEvidenceItemById } from '@/lib/db/queries/evidence';
 import { CreateEvidenceMappingSchema } from '@/lib/schemas/matching';
+import { db } from '@/lib/db';
+import { requirement } from '@/lib/db/schema';
+import { and, eq } from 'drizzle-orm';
 import {
   EMBEDDING_MODEL_VERSION,
   MATCHING_PROMPT_VERSION,
@@ -14,10 +18,7 @@ import {
 // GET /api/matching/[jobId]/mappings - Get all mappings for a job
 // ============================================================
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ jobId: string }> }
-) {
+export async function GET(request: Request, { params }: { params: Promise<{ jobId: string }> }) {
   try {
     // Authenticate
     const user = await verifySession();
@@ -43,10 +44,7 @@ export async function GET(
 // POST /api/matching/[jobId]/mappings - Manually create a mapping
 // ============================================================
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ jobId: string }> }
-) {
+export async function POST(request: Request, { params }: { params: Promise<{ jobId: string }> }) {
   try {
     // Authenticate
     const user = await verifySession();
@@ -69,6 +67,23 @@ export async function POST(
     }
 
     const data = result.data;
+
+    // Ownership checks: the evidence item must belong to the caller and the
+    // requirement must belong to this job — otherwise any authenticated user
+    // could attach (and later read) another user's private evidence
+    const evidenceOwned = await getEvidenceItemById(data.evidenceItemId, user.id);
+    if (!evidenceOwned) {
+      return Response.json({ error: 'Evidence item not found' }, { status: 404 });
+    }
+
+    const [requirementInJob] = await db
+      .select({ id: requirement.id })
+      .from(requirement)
+      .where(and(eq(requirement.id, data.requirementId), eq(requirement.jobId, jobId)))
+      .limit(1);
+    if (!requirementInJob) {
+      return Response.json({ error: 'Requirement does not belong to this job' }, { status: 400 });
+    }
 
     // Create mapping (manual creation, so createdBySystem=false)
     const mapping = await createEvidenceMapping({

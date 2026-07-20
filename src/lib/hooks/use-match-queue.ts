@@ -11,18 +11,11 @@ export function useMatchQueue() {
   return useQuery({
     queryKey: matchKeys.queue(),
     queryFn: async () => {
-      console.log('[useMatchQueue] Fetching queue from API...');
       const res = await fetch('/api/matching/queue');
       if (!res.ok) {
-        console.error('[useMatchQueue] API error:', res.status, res.statusText);
         throw new Error('Failed to fetch match queue');
       }
-      const data = await res.json();
-      console.log('[useMatchQueue] Received queue data:', {
-        count: data.queue?.length || 0,
-        generatedAt: data.generatedAt,
-      });
-      return data;
+      return res.json();
     },
     staleTime: 1000 * 30, // 30 seconds - queue must reflect recent polls/criteria changes quickly
     gcTime: 1000 * 60 * 30, // 30 minutes - prevents cache GC during navigation

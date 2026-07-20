@@ -2,6 +2,7 @@ import { db } from '@/lib/db';
 import { job, requirement, evidenceMapping, userCriteria } from '@/lib/db/schema';
 import { eq, ne, and, or, isNull, inArray, sql, desc } from 'drizzle-orm';
 import { determineFitBand, type FitBand } from '@/lib/schemas/matching';
+import { filterEligibleJobs } from './eligibility';
 
 /**
  * Weighted job ranking using 70% fit + 30% freshness.
@@ -103,6 +104,11 @@ export async function getRankedJobs(userId: string): Promise<RankedJob[]> {
       totalRequirements: sql<number>`cast(count(distinct ${requirement.id}) as integer)`,
       mappedRequirements: sql<number>`cast(count(distinct ${evidenceMapping.id}) as integer)`,
       daysOld: sql<number>`extract(epoch from (now() - ${job.sourceUpdatedAt})) / 86400`,
+      visaSponsorship: job.visaSponsorship,
+      remotePolicy: job.remotePolicy,
+      roleType: job.roleType,
+      season: job.season,
+      graduationWindow: job.graduationWindow,
     })
     .from(job)
     .leftJoin(
@@ -123,8 +129,22 @@ export async function getRankedJobs(userId: string): Promise<RankedJob[]> {
     )
     .limit(50);
 
+  // Hard eligibility filters (CONTEXT.md locked decision #2): visa, on-site
+  // location, season, graduation window. Unknown values pass through, so
+  // this only drops jobs that explicitly conflict with the user's criteria.
+  // Runs after the LIMIT — ineligible rows shrink the page rather than
+  // backfilling, which is acceptable at this data scale.
+  const eligibleJobs = filterEligibleJobs(
+    rankedJobs.map((row) => ({ ...row, id: row.jobId })),
+    {
+      visaRequired: activeCriteria.visaRequired ?? undefined,
+      locations: activeCriteria.locations ?? undefined,
+      jobTypes: activeCriteria.jobTypes ?? undefined,
+    }
+  );
+
   // Map to RankedJob type with fit bands and reasons
-  const results: RankedJob[] = rankedJobs.map((row) => {
+  const results: RankedJob[] = eligibleJobs.map((row) => {
     const fitScore = row.totalRequirements > 0 ? row.mappedRequirements / row.totalRequirements : 0;
     const freshnessScore = calculateFreshnessScore(row.daysOld);
     const compositeScore = 0.7 * fitScore + 0.3 * freshnessScore;

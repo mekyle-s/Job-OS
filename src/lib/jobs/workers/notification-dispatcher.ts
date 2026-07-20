@@ -1,14 +1,13 @@
-import type { Job } from 'pg-boss';
 import { db } from '@/lib/db';
 import { user, userCriteria, job as jobTable, requirement, evidenceMapping } from '@/lib/db/schema';
-import { eq, and, gt, sql } from 'drizzle-orm';
+import { eq, and, gt, isNull, sql } from 'drizzle-orm';
 import { sendHighFitAlert } from '@/lib/email/send-alert';
 import { logParserAudit } from '@/lib/db/queries/audit';
 
 /**
  * Check for new high-fit roles for users with active criteria and send
  * digest emails (up to 10 new roles per user).
- * Callable directly (serverless-safe) or via the pg-boss wrapper below.
+ * Serverless-safe: called directly from the cron route, no queue process.
  */
 export async function dispatchNotifications(): Promise<void> {
   try {
@@ -82,6 +81,31 @@ export async function dispatchNotifications(): Promise<void> {
           };
         });
 
+        // Claim the notification window BEFORE sending: the conditional
+        // update only succeeds if lastNotifiedAt still holds the value we
+        // read, so an overlapping run loses the claim and skips — and a
+        // crash after the send can no longer cause duplicate emails.
+        const claimTime = new Date();
+        const claimed = await db
+          .update(user)
+          .set({ lastNotifiedAt: claimTime, updatedAt: claimTime })
+          .where(
+            and(
+              eq(user.id, userData.userId),
+              userData.lastNotifiedAt
+                ? eq(user.lastNotifiedAt, userData.lastNotifiedAt)
+                : isNull(user.lastNotifiedAt)
+            )
+          )
+          .returning({ id: user.id });
+
+        if (claimed.length === 0) {
+          console.log(
+            `[notification-dispatcher] Another run already claimed user ${userData.userId}, skipping`
+          );
+          continue;
+        }
+
         // Send email alert
         const { error } = await sendHighFitAlert(
           userData.userEmail,
@@ -94,14 +118,14 @@ export async function dispatchNotifications(): Promise<void> {
             `[notification-dispatcher] Failed to send alert to ${userData.userEmail}:`,
             error
           );
+          // Best-effort revert so the next run retries this window (a missed
+          // retry here just delays the alert; the claim guard stays intact)
+          await db
+            .update(user)
+            .set({ lastNotifiedAt: userData.lastNotifiedAt, updatedAt: new Date() })
+            .where(and(eq(user.id, userData.userId), eq(user.lastNotifiedAt, claimTime)));
           continue;
         }
-
-        // Update user's lastNotifiedAt timestamp
-        await db
-          .update(user)
-          .set({ lastNotifiedAt: new Date(), updatedAt: new Date() })
-          .where(eq(user.id, userData.userId));
 
         // Log audit trail
         await logParserAudit({
@@ -131,12 +155,4 @@ export async function dispatchNotifications(): Promise<void> {
     // Log error but don't throw - failed notification shouldn't crash worker
     console.error('[notification-dispatcher] Worker error:', error);
   }
-}
-
-/**
- * pg-boss worker wrapper (used when running with a persistent worker process).
- */
-export async function notificationDispatcherHandler(jobs: Job[]): Promise<void> {
-  if (!jobs[0]) return;
-  return dispatchNotifications();
 }

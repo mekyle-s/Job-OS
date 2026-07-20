@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { after } from 'next/server';
+import { isCronAuthorized } from '@/lib/auth/cron';
 import { getAllActiveCriteria } from '@/lib/db/queries/user-criteria';
 import { pollJobsForUser } from '@/lib/jobs/workers/job-poller';
 
@@ -14,11 +15,8 @@ export const maxDuration = 300;
  * response via after() — serverless-safe, no background worker process.
  */
 export async function GET(request: NextRequest) {
-  // 1. Verify CRON_SECRET from authorization header. Fail closed when the
-  // secret is unset — otherwise "Bearer undefined" would authenticate.
-  const cronSecret = process.env.CRON_SECRET;
-  const authHeader = request.headers.get('authorization');
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  // 1. Verify CRON_SECRET from authorization header (fails closed when unset)
+  if (!isCronAuthorized(request)) {
     return new Response('Unauthorized', { status: 401 });
   }
 
