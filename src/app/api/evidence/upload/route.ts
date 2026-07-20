@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { after } from 'next/server';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
-import { createEvidenceSource, deleteParsedResumeEvidence } from '@/lib/db/queries/evidence';
+import { createEvidenceSource } from '@/lib/db/queries/evidence';
 import { processResumeSource } from '@/lib/jobs/workers/resume-parser';
 import { extractTextFromPDF } from '@/lib/parsers/pdf-extractor';
 import { extractTextFromDOCX } from '@/lib/parsers/docx-extractor';
@@ -48,24 +48,30 @@ export async function POST(request: NextRequest) {
 
     // 5. Extract text in-request and store it on the source record.
     // No filesystem writes — serverless filesystems are ephemeral/read-only,
-    // and the parser only ever needs the text.
+    // and the parser only ever needs the text. Extraction failures are the
+    // user's file being unreadable — report them as 400s with the extractor's
+    // message rather than falling through to the generic 500 handler.
     const buffer = Buffer.from(await file.arrayBuffer());
-    const rawText =
-      file.type === 'application/pdf'
-        ? await extractTextFromPDF(buffer)
-        : await extractTextFromDOCX(buffer);
+    let rawText: string;
+    try {
+      rawText =
+        file.type === 'application/pdf'
+          ? await extractTextFromPDF(buffer)
+          : await extractTextFromDOCX(buffer);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Could not extract any text from the file.';
+      return Response.json({ error: message }, { status: 400 });
+    }
 
     if (!rawText || rawText.trim().length === 0) {
       return Response.json({ error: 'Could not extract any text from the file.' }, { status: 400 });
     }
 
-    // 6. Re-uploads replace prior resume-derived evidence (manual items kept)
-    const removed = await deleteParsedResumeEvidence(userId);
-    if (removed > 0) {
-      console.log(`[Upload] Replaced ${removed} evidence items from previous resume uploads`);
-    }
-
-    // 7. Create evidenceSource record with the extracted text
+    // 6. Create evidenceSource record with the extracted text.
+    // Prior resume-derived evidence is replaced transactionally by the parser
+    // when the new items are inserted — never deleted up front, so a failed
+    // parse can't wipe the user's existing evidence.
     const source = await createEvidenceSource({
       userId,
       sourceType: 'resume',
@@ -75,7 +81,7 @@ export async function POST(request: NextRequest) {
       rawText,
     });
 
-    // 8. Parse after the response is sent (LLM extraction + embeddings).
+    // 7. Parse after the response is sent (LLM extraction + embeddings).
     // after() keeps the serverless function alive past the response, so this
     // works on Vercel where background queue workers would be frozen.
     after(async () => {
@@ -87,14 +93,14 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // 9. Return success response (client polls /api/evidence/status/[sourceId])
+    // 8. Return success response (client polls /api/evidence/status/[sourceId])
     return Response.json({
       sourceId: source.id,
       status: 'queued',
     });
   } catch (error) {
+    // Log the detail server-side; don't echo internal errors to the client
     console.error('Upload error:', error);
-    const message = error instanceof Error ? error.message : 'Failed to upload file';
-    return Response.json({ error: message }, { status: 500 });
+    return Response.json({ error: 'Failed to upload file. Please try again.' }, { status: 500 });
   }
 }

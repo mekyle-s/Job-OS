@@ -1,20 +1,13 @@
-import type { Job } from 'pg-boss';
 import { extractTextFromPDF } from '@/lib/parsers/pdf-extractor';
 import { extractTextFromDOCX } from '@/lib/parsers/docx-extractor';
 import { parseResumeText } from '@/lib/parsers/evidence-parser';
 import {
   getEvidenceSourceById,
   updateEvidenceSourceStatus,
-  createManyEvidenceItems,
+  replaceParsedResumeEvidence,
+  type EvidenceItemInput,
 } from '@/lib/db/queries/evidence';
 import { generateBatchEmbeddings, buildEvidenceEmbeddingText } from '@/lib/matching/embedder';
-
-export const RESUME_PARSE_QUEUE = 'parse-resume';
-
-interface ResumeParsePayload {
-  sourceId: string;
-  userId: string;
-}
 
 /**
  * Parse an uploaded resume source into Evidence Bank items.
@@ -22,8 +15,6 @@ interface ResumeParsePayload {
  * Text is read from the source's rawText column (stored at upload time —
  * serverless-safe, no filesystem dependency). Falls back to reading the file
  * from disk for legacy sources that only have a fileUrl.
- *
- * Callable directly or via the pg-boss worker wrapper below.
  */
 export async function processResumeSource(
   sourceId: string,
@@ -62,27 +53,7 @@ export async function processResumeSource(
     const evidence = await parseResumeText(text);
 
     // 5. Convert parsed evidence to database items
-    const items: Array<{
-      userId: string;
-      sourceId: string;
-      itemType: 'experience' | 'project' | 'skill' | 'education';
-      title: string;
-      company?: string;
-      startDate?: string;
-      endDate?: string;
-      content?: string;
-      metadata?: {
-        skills?: string[];
-        technologies?: string[];
-        achievements?: string[];
-        links?: { type: string; url: string }[];
-        location?: string;
-        gpa?: string;
-      };
-      confidence: number;
-      isManual: boolean;
-      embedding?: number[];
-    }> = [];
+    const items: EvidenceItemInput[] = [];
 
     for (const exp of evidence.experiences) {
       items.push({
@@ -157,24 +128,37 @@ export async function processResumeSource(
       });
     }
 
+    // A parse that produced nothing is a failure, not a completed replace:
+    // keep the user's previous resume evidence and surface the error on the
+    // source instead of marking a garbage upload 'completed'.
+    if (items.length === 0) {
+      throw new Error(
+        'No evidence could be extracted from this resume — previous evidence was kept'
+      );
+    }
+
     // 6. Generate embeddings for all items in a single batched API call so
     // they are immediately usable by the semantic matching pipeline.
     // Best-effort: an embedding failure must not lose the parsed evidence.
-    if (items.length > 0) {
-      try {
-        const texts = items.map((item) => buildEvidenceEmbeddingText(item));
-        const embeddings = await generateBatchEmbeddings(texts);
-        embeddings.forEach((embedding, i) => {
-          items[i].embedding = embedding;
-        });
-      } catch (error) {
-        console.error(
-          `[ResumeParser] Embedding generation failed for source ${sourceId}, storing items without embeddings:`,
-          error
-        );
-      }
+    try {
+      const texts = items.map((item) => buildEvidenceEmbeddingText(item));
+      const embeddings = await generateBatchEmbeddings(texts);
+      embeddings.forEach((embedding, i) => {
+        items[i].embedding = embedding;
+      });
+    } catch (error) {
+      console.error(
+        `[ResumeParser] Embedding generation failed for source ${sourceId}, storing items without embeddings:`,
+        error
+      );
+    }
 
-      await createManyEvidenceItems(items);
+    // Replace prior resume-derived evidence in the same transaction as the
+    // insert: re-uploads never duplicate items, and a failure anywhere
+    // leaves the previous evidence untouched (no delete-then-crash window).
+    const { removed } = await replaceParsedResumeEvidence(userId, items);
+    if (removed > 0) {
+      console.log(`[ResumeParser] Replaced ${removed} evidence items from previous resume uploads`);
     }
 
     // 7. Mark source as completed
@@ -186,13 +170,4 @@ export async function processResumeSource(
     await updateEvidenceSourceStatus(sourceId, 'failed', message);
     throw error;
   }
-}
-
-/**
- * pg-boss worker wrapper (used when running with a persistent worker process).
- */
-export async function resumeParserHandler(jobs: Job<ResumeParsePayload>[]) {
-  const job = jobs[0];
-  const { sourceId, userId } = job.data;
-  return processResumeSource(sourceId, userId);
 }

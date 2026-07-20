@@ -1,18 +1,10 @@
-import type { Job } from 'pg-boss';
 import { extractRequirements } from '../parsers/requirement-extractor';
 import { updateJobParseStatus } from '@/lib/db/queries/jobs';
 import { createRequirements } from '@/lib/db/queries/requirements';
 
-export const REQUIREMENT_PARSER_QUEUE = 'extract-requirements';
-
-interface ExtractRequirementsPayload {
-  jobId: string;
-  description: string;
-}
-
 /**
  * Extract requirements for a single job and store them, updating parse status.
- * Callable directly (serverless-safe) or via the pg-boss worker wrapper below.
+ * Serverless-safe: called directly from routes, no queue process required.
  */
 export async function extractJobRequirements(
   jobId: string,
@@ -42,13 +34,4 @@ export async function extractJobRequirements(
     await updateJobParseStatus(jobId, 'failed', errorMessage);
     throw error;
   }
-}
-
-/**
- * pg-boss worker wrapper (used when running with a persistent worker process).
- */
-export async function requirementParserHandler(jobs: Job<ExtractRequirementsPayload>[]) {
-  const job = jobs[0];
-  const { jobId, description } = job.data;
-  return extractJobRequirements(jobId, description);
 }

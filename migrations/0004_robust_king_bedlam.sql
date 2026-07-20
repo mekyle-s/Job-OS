@@ -1,3 +1,4 @@
+CREATE EXTENSION IF NOT EXISTS vector;--> statement-breakpoint
 CREATE TABLE "evidence_mapping" (
 	"id" text PRIMARY KEY NOT NULL,
 	"user_id" text NOT NULL,

@@ -47,7 +47,9 @@ export async function createEvidenceMapping(data: {
   return await db.transaction(async (tx) => {
     const id = crypto.randomUUID();
 
-    // Create mapping
+    // Create mapping. If the (user, requirement, evidence) triple already
+    // exists, overwrite it in place — a manual create over an existing
+    // system mapping is an override, not a duplicate.
     const [created] = await tx
       .insert(evidenceMapping)
       .values({
@@ -66,6 +68,27 @@ export async function createEvidenceMapping(data: {
         llmModelVersion: data.llmModelVersion,
         createdBySystem: data.createdBySystem ?? true,
         manualOverrideReason: data.manualOverrideReason,
+      })
+      .onConflictDoUpdate({
+        target: [
+          evidenceMapping.userId,
+          evidenceMapping.requirementId,
+          evidenceMapping.evidenceItemId,
+        ],
+        set: {
+          decision: data.decision,
+          confidenceBand: data.confidenceBand,
+          reason: data.reason,
+          needsReview: data.needsReview,
+          sourceRequirementText: data.sourceRequirementText,
+          sourceEvidenceExcerpt: data.sourceEvidenceExcerpt,
+          embeddingModelVersion: data.embeddingModelVersion,
+          matchingPromptVersion: data.matchingPromptVersion,
+          llmModelVersion: data.llmModelVersion,
+          createdBySystem: data.createdBySystem ?? true,
+          manualOverrideReason: data.manualOverrideReason,
+          updatedAt: new Date(),
+        },
       })
       .returning();
 
@@ -132,8 +155,20 @@ export async function createManyEvidenceMappings(
       createdBySystem: true,
     }));
 
-    // Batch insert mappings
-    const inserted = await tx.insert(evidenceMapping).values(mappingsWithIds).returning();
+    // Batch insert mappings. ON CONFLICT DO NOTHING: a concurrent run that
+    // validated the same pair first wins; this run's duplicate is dropped
+    // (and gets no audit entry, since returning() only yields inserted rows)
+    const inserted = await tx
+      .insert(evidenceMapping)
+      .values(mappingsWithIds)
+      .onConflictDoNothing({
+        target: [
+          evidenceMapping.userId,
+          evidenceMapping.requirementId,
+          evidenceMapping.evidenceItemId,
+        ],
+      })
+      .returning();
 
     // Create audit trail entries
     const auditEntries = inserted.map((mapping) => ({
@@ -152,7 +187,9 @@ export async function createManyEvidenceMappings(
       },
     }));
 
-    await tx.insert(evidenceMappingAudit).values(auditEntries);
+    if (auditEntries.length > 0) {
+      await tx.insert(evidenceMappingAudit).values(auditEntries);
+    }
 
     return inserted;
   });

@@ -1,4 +1,3 @@
-import type { Job } from 'pg-boss';
 import { getAdapter } from '../sources';
 import type { UserCriteriaInput } from '../sources/adapter';
 import { getUserCriteria, updateLastPolledAt } from '@/lib/db/queries/user-criteria';
@@ -9,8 +8,6 @@ import {
   getPendingParseJobs,
 } from '@/lib/db/queries/jobs';
 import { extractJobRequirements } from './requirement-parser';
-
-export const JOB_POLLER_QUEUE = 'poll-jobs-for-user';
 
 // Hard cap on requirement extractions per poll run. Each extraction is one
 // gpt-4o-mini call, and a discover-mode poll (all boards) can surface hundreds
@@ -37,11 +34,6 @@ function normalizeRoleType(employmentType?: string): string {
   }
 }
 
-interface PollJobsPayload {
-  userId: string;
-  criteriaId: string;
-}
-
 export interface PollResult {
   userId: string;
   jobsFetched: number;
@@ -54,9 +46,8 @@ export interface PollResult {
  * Poll job sources for a user's criteria, store raw + canonical jobs, and
  * extract requirements for pending jobs (capped per run).
  *
- * Runs extractions inline (sequential, error-safe) rather than via pg-boss so
- * it works in serverless environments where background workers don't outlive
- * the request. Callable directly or via the pg-boss wrapper below.
+ * Runs extractions inline (sequential, error-safe) so it works in serverless
+ * environments where background workers don't outlive the request.
  */
 export async function pollJobsForUser(userId: string, criteriaId: string): Promise<PollResult> {
   // 1. Get user criteria from database
@@ -194,13 +185,4 @@ export async function pollJobsForUser(userId: string, criteriaId: string): Promi
     updatedJobs,
     requirementsExtracted,
   };
-}
-
-/**
- * pg-boss worker wrapper (used when running with a persistent worker process).
- */
-export async function jobPollerHandler(jobs: Job<PollJobsPayload>[]) {
-  const job = jobs[0];
-  const { userId, criteriaId } = job.data;
-  return pollJobsForUser(userId, criteriaId);
 }

@@ -8,6 +8,7 @@ import {
   integer,
   index,
   uniqueIndex,
+  primaryKey,
 } from 'drizzle-orm/pg-core';
 import { vector } from 'drizzle-orm/pg-core/columns/vector_extension/vector';
 
@@ -333,7 +334,32 @@ export const evidenceMapping = pgTable(
     index('evidence_mapping_requirement_id_idx').on(table.requirementId),
     index('evidence_mapping_evidence_item_id_idx').on(table.evidenceItemId),
     index('evidence_mapping_needs_review_idx').on(table.needsReview),
+    // One mapping per user↔requirement↔evidence triple: concurrent matching
+    // runs insert with ON CONFLICT DO NOTHING instead of duplicating rows
+    uniqueIndex('evidence_mapping_user_pair_idx').on(
+      table.userId,
+      table.requirementId,
+      table.evidenceItemId
+    ),
   ]
+);
+
+// Per-user matching-run claims. The matching run route atomically upserts a
+// row here to claim a (user, job) run slot — this is what enforces the
+// cooldown per USER (job.lastMatchedAt is shared across users) and stops two
+// concurrent runs from double-spending LLM calls on the same pairs.
+export const matchingRun = pgTable(
+  'matching_run',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    jobId: text('job_id')
+      .notNull()
+      .references(() => job.id, { onDelete: 'cascade' }),
+    lastRunAt: timestamp('last_run_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.jobId] })]
 );
 
 // Evidence mapping audit table - tracks changes to evidence mappings

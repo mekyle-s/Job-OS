@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { after } from 'next/server';
+import { isCronAuthorized } from '@/lib/auth/cron';
 import { getAllActiveCriteria } from '@/lib/db/queries/user-criteria';
 import { pollJobsForUser } from '@/lib/jobs/workers/job-poller';
 
@@ -14,9 +15,8 @@ export const maxDuration = 300;
  * response via after() — serverless-safe, no background worker process.
  */
 export async function GET(request: NextRequest) {
-  // 1. Verify CRON_SECRET from authorization header
-  const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  // 1. Verify CRON_SECRET from authorization header (fails closed when unset)
+  if (!isCronAuthorized(request)) {
     return new Response('Unauthorized', { status: 401 });
   }
 

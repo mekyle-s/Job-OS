@@ -40,10 +40,10 @@ export interface JobWithFilters {
  * Jobs that fail ANY filter are excluded.
  * Unknown values pass through (conservative: don't exclude what we can't confirm).
  */
-export function filterEligibleJobs(
-  jobs: JobWithFilters[],
+export function filterEligibleJobs<T extends JobWithFilters>(
+  jobs: T[],
   userCriteria: UserCriteriaFilters
-): JobWithFilters[] {
+): T[] {
   return jobs.filter((job) => {
     // Filter 1: Visa/Work Authorization
     if (userCriteria.visaRequired === true && job.visaSponsorship === 'no') {

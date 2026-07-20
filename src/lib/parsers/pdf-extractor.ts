@@ -37,8 +37,16 @@ export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
     });
 
     pdfParser.on('pdfParser_dataError', (errData: Error | { parserError: Error }) => {
-      const error = errData instanceof Error ? errData : errData.parserError;
-      reject(new Error(`PDF parsing error: ${error.message}`));
+      // pdf2json emits Error objects, {parserError} wrappers, or plain strings
+      const raw = errData instanceof Error ? errData : errData?.parserError;
+      const message = (
+        raw instanceof Error
+          ? raw.message
+          : typeof raw === 'string' && raw
+            ? raw
+            : String(raw ?? 'unrecognized or corrupted PDF')
+      ).replace(/^(Error:\s*)+/, ''); // pdf2json stacks redundant "Error: " prefixes
+      reject(new Error(`PDF parsing error: ${message}`));
     });
 
     pdfParser.parseBuffer(buffer);

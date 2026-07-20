@@ -65,8 +65,8 @@ export function useUpdateRoleStatus() {
       await queryClient.cancelQueries({ queryKey: matchKeys.queue() });
       await queryClient.cancelQueries({ queryKey: roleStatusKeys.forJob(jobId) });
 
-      // Snapshot previous queue data for rollback
-      const previousQueue = queryClient.getQueryData(matchKeys.queue());
+      // Snapshot the status we're about to optimistically overwrite
+      const previousStatus = queryClient.getQueryData<RoleStatus>(roleStatusKeys.forJob(jobId));
 
       // Optimistically update the role status in cache
       queryClient.setQueryData(roleStatusKeys.forJob(jobId), {
@@ -75,12 +75,13 @@ export function useUpdateRoleStatus() {
       });
 
       // Return context for rollback
-      return { previousQueue };
+      return { previousStatus };
     },
-    onError: (_err, _variables, context) => {
-      // Rollback on error
-      if (context?.previousQueue) {
-        queryClient.setQueryData(matchKeys.queue(), context.previousQueue);
+    onError: (_err, { jobId }, context) => {
+      // Roll back the optimistic status so a failed update doesn't leave the
+      // card showing (or filtered by) a status the server never accepted
+      if (context?.previousStatus !== undefined) {
+        queryClient.setQueryData(roleStatusKeys.forJob(jobId), context.previousStatus);
       }
     },
     onSettled: (_data, _error, { jobId }) => {

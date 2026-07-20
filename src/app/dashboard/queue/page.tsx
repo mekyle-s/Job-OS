@@ -15,13 +15,6 @@ function MatchQueueContent() {
   const runMatching = useRunMatching();
   const statusFilter = useStatusFilter();
 
-  console.log('[MatchQueueContent] Render:', {
-    isLoading,
-    hasData: !!data,
-    queueLength: data?.queue?.length || 0,
-    hasError: !!error,
-  });
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -46,7 +39,11 @@ function MatchQueueContent() {
     );
   }
 
-  if (error) {
+  // Full error screen ONLY when there is no data at all. A failed background
+  // refetch sets `error` while `data` still holds the last good queue — in
+  // that case keep rendering the queue with a soft refresh banner instead of
+  // discarding it (this was the historical "queue disappears" bug).
+  if (error && !data) {
     return (
       <div className="min-h-screen bg-gray-50">
         <header className="bg-white shadow-sm">
@@ -100,6 +97,19 @@ function MatchQueueContent() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8">
+        {error && (
+          <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3 flex items-center justify-between">
+            <p className="text-sm text-yellow-800">
+              Couldn&apos;t refresh the queue — showing the last loaded results.
+            </p>
+            <button
+              onClick={() => refetch()}
+              className="text-sm font-medium text-yellow-900 underline hover:no-underline"
+            >
+              Retry
+            </button>
+          </div>
+        )}
         {queue.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-8 text-center">
             <h2 className="text-lg font-medium text-gray-900 mb-2">No matches yet</h2>
