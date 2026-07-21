@@ -2,6 +2,7 @@ import { after } from 'next/server';
 import { requireUser } from '@/lib/auth/session';
 import { getUserCriteria } from '@/lib/db/queries/user-criteria';
 import { pollJobsForUser } from '@/lib/jobs/workers/job-poller';
+import { autoMatchTopJobs } from '@/lib/matching/auto-match';
 
 // Polling + capped requirement extraction continue in after() past the response
 export const maxDuration = 300;
@@ -24,11 +25,13 @@ export async function POST() {
     return Response.json({ error: 'No active criteria found for user' }, { status: 404 });
   }
 
-  // 3. Run the poll after the response is sent
+  // 3. Run the poll after the response is sent, then auto-match the top of
+  // the refreshed queue so fit coverage appears without manual per-role runs
   after(async () => {
     try {
       const result = await pollJobsForUser(user.id, criteria.id);
       console.log(`[Poll API] Poll complete for user ${user.id}:`, result);
+      await autoMatchTopJobs(user.id);
     } catch (error) {
       console.error(`[Poll API] Poll failed for user ${user.id}:`, error);
     }

@@ -1,8 +1,9 @@
 import { verifySession } from '@/lib/auth/session';
 import { runMatchingForJob } from '@/lib/matching/pipeline';
+import { claimMatchingRun, MATCHING_COOLDOWN_MINUTES } from '@/lib/matching/run-claim';
 import { db } from '@/lib/db';
-import { job, requirement, matchingRun } from '@/lib/db/schema';
-import { eq, sql } from 'drizzle-orm';
+import { job, requirement } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 // ============================================================
@@ -47,26 +48,10 @@ export async function POST(request: Request) {
     // Cost guard: each run is capped, but this also throttles run frequency.
     // Re-runs shortly after a match add nothing (validated pairs are cached),
     // so reject them instead of burning API calls.
-    //
-    // The claim is an atomic per-(user, job) upsert: the insert wins on first
-    // run, the conditional update wins only when the cooldown has elapsed.
-    // Concurrent runs (double-click, two tabs) and other users' runs on the
-    // same job can never double-spend LLM calls or 429 each other.
-    const COOLDOWN_MINUTES = 10;
-    const claimed = await db
-      .insert(matchingRun)
-      .values({ userId: user.id, jobId, lastRunAt: new Date() })
-      .onConflictDoUpdate({
-        target: [matchingRun.userId, matchingRun.jobId],
-        set: { lastRunAt: new Date() },
-        setWhere: sql`${matchingRun.lastRunAt} < now() - make_interval(mins => ${COOLDOWN_MINUTES})`,
-      })
-      .returning({ lastRunAt: matchingRun.lastRunAt });
-
-    if (claimed.length === 0) {
+    if (!(await claimMatchingRun(user.id, jobId))) {
       return Response.json(
         {
-          error: `Matching for this role ran within the last ${COOLDOWN_MINUTES} minutes. Try again shortly.`,
+          error: `Matching for this role ran within the last ${MATCHING_COOLDOWN_MINUTES} minutes. Try again shortly.`,
         },
         { status: 429 }
       );

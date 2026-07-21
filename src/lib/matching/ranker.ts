@@ -1,8 +1,9 @@
 import { db } from '@/lib/db';
 import { job, requirement, evidenceMapping, userCriteria } from '@/lib/db/schema';
-import { eq, ne, and, or, isNull, inArray, sql, desc } from 'drizzle-orm';
+import { eq, ne, and, or, isNull, inArray, sql } from 'drizzle-orm';
 import { determineFitBand, type FitBand } from '@/lib/schemas/matching';
 import { filterEligibleJobs } from './eligibility';
+import { jobFunctionMatches } from '@/lib/jobs/sources/greenhouse';
 
 /**
  * Weighted job ranking using 70% fit + 30% freshness.
@@ -25,6 +26,104 @@ export interface RankedJob {
   compositeScore: number;
   fitBand: FitBand;
   fitReasons: string[];
+}
+
+/** Raw aggregation row for one job, before filtering/scoring. */
+export interface RankableJobRow {
+  jobId: string;
+  title: string;
+  company: string;
+  location: string;
+  url: string;
+  sourceUpdatedAt: Date;
+  totalRequirements: number;
+  mappedRequirements: number;
+  daysOld: number;
+  departmentName?: string | null;
+  visaSponsorship?: string | null;
+  remotePolicy?: string | null;
+  roleType?: string | null;
+  season?: string | null;
+  graduationWindow?: string | null;
+}
+
+export interface RankingCriteria {
+  jobFunction?: string | null;
+  visaRequired?: boolean | null;
+  locations?: string[] | null;
+  jobTypes?: string[] | null;
+}
+
+// Queue page size. Filtering happens BEFORE this cap so relevant jobs are
+// never crowded out by fresher-but-irrelevant ones.
+const QUEUE_LIMIT = 50;
+
+/**
+ * Filter, score, and rank raw job rows against the user's criteria.
+ * Pure function — exported for unit testing.
+ *
+ * Filters: job function (flexible title+department matching, same rule the
+ * poller uses) and hard eligibility (visa/onsite-location/type/season).
+ * Ranking: composite = 0.7 * fit + 0.3 * freshness, top QUEUE_LIMIT.
+ */
+export function rankJobRows(rows: RankableJobRow[], criteria: RankingCriteria): RankedJob[] {
+  // The poller filters by job function at fetch time, but the job table is
+  // shared across users (and accumulates old polls), so the queue must apply
+  // the user's own function filter here too — otherwise every parsed job in
+  // the database shows up regardless of what the user asked for.
+  const functionMatched = criteria.jobFunction
+    ? rows.filter((row) =>
+        jobFunctionMatches(criteria.jobFunction!, `${row.title} ${row.departmentName ?? ''}`)
+      )
+    : rows;
+
+  const eligible = filterEligibleJobs(
+    functionMatched.map((row) => ({ ...row, id: row.jobId })),
+    {
+      visaRequired: criteria.visaRequired ?? undefined,
+      locations: criteria.locations ?? undefined,
+      jobTypes: criteria.jobTypes ?? undefined,
+    }
+  );
+
+  return eligible
+    .map((row) => {
+      const fitScore =
+        row.totalRequirements > 0 ? row.mappedRequirements / row.totalRequirements : 0;
+      const freshnessScore = calculateFreshnessScore(row.daysOld);
+      const compositeScore = 0.7 * fitScore + 0.3 * freshnessScore;
+
+      // Determine fit band per CONTEXT.md locked decision #4
+      const coveragePercent = fitScore * 100;
+      // For simplicity, assume medium confidence if we have matches
+      const avgConfidenceBand = row.mappedRequirements > 0 ? 'medium' : 'low';
+      const fitBand = determineFitBand(coveragePercent, avgConfidenceBand);
+
+      const fitReasons = generateFitReasons(
+        row.mappedRequirements,
+        row.totalRequirements,
+        fitScore,
+        freshnessScore
+      );
+
+      return {
+        jobId: row.jobId,
+        title: row.title,
+        company: row.company,
+        location: row.location,
+        url: row.url,
+        sourceUpdatedAt: row.sourceUpdatedAt,
+        totalRequirements: row.totalRequirements,
+        mappedRequirements: row.mappedRequirements,
+        fitScore,
+        freshnessScore,
+        compositeScore,
+        fitBand,
+        fitReasons,
+      };
+    })
+    .sort((a, b) => b.compositeScore - a.compositeScore)
+    .slice(0, QUEUE_LIMIT);
 }
 
 /**
@@ -85,15 +184,14 @@ export async function getRankedJobs(userId: string): Promise<RankedJob[]> {
     );
   }
 
-  // SQL aggregation query:
-  // 1. Get active, parsed jobs matching the user's criteria
-  // 2. Count total requirements and evidence-mapped requirements per job
-  // 3. Calculate fit_score = mapped_requirements / total_requirements
-  // 4. Calculate freshness_score using exponential decay on days since sourceUpdatedAt
-  // 5. Compute composite_score = 0.7 * fit_score + 0.3 * freshness_score
-  // 6. Return ordered by composite_score DESC, limit 50
-
-  const rankedJobs = await db
+  // SQL aggregation: active parsed jobs matching the cheap criteria (company,
+  // job type), with per-job requirement and coverage counts. A requirement
+  // counts as covered when at least one mapping has decision match/weak_match
+  // — counting mapping ROWS would overcount requirements with multiple
+  // evidence matches (and count manual 'no_match' overrides as coverage).
+  // Function/eligibility filtering, scoring, and the top-50 cut happen in
+  // rankJobRows so relevant jobs are never crowded out before filtering.
+  const rows = await db
     .select({
       jobId: job.id,
       title: job.title,
@@ -102,8 +200,9 @@ export async function getRankedJobs(userId: string): Promise<RankedJob[]> {
       url: job.url,
       sourceUpdatedAt: job.sourceUpdatedAt,
       totalRequirements: sql<number>`cast(count(distinct ${requirement.id}) as integer)`,
-      mappedRequirements: sql<number>`cast(count(distinct ${evidenceMapping.id}) as integer)`,
+      mappedRequirements: sql<number>`cast(count(distinct case when ${evidenceMapping.decision} in ('match', 'weak_match') then ${requirement.id} end) as integer)`,
       daysOld: sql<number>`extract(epoch from (now() - ${job.sourceUpdatedAt})) / 86400`,
+      departmentName: sql<string | null>`${job.metadata} ->> 'departmentName'`,
       visaSponsorship: job.visaSponsorship,
       remotePolicy: job.remotePolicy,
       roleType: job.roleType,
@@ -122,65 +221,14 @@ export async function getRankedJobs(userId: string): Promise<RankedJob[]> {
     .where(and(...jobConditions))
     .groupBy(job.id)
     .having(sql`count(distinct ${requirement.id}) > 0`) // Only jobs with requirements
-    .orderBy(
-      desc(
-        sql`0.7 * (cast(count(distinct ${evidenceMapping.id}) as float) / cast(count(distinct ${requirement.id}) as float)) + 0.3 * exp(-0.1 * extract(epoch from (now() - ${job.sourceUpdatedAt})) / 86400)`
-      )
-    )
-    .limit(50);
+    .limit(1000); // Safety cap far above current data scale
 
-  // Hard eligibility filters (CONTEXT.md locked decision #2): visa, on-site
-  // location, season, graduation window. Unknown values pass through, so
-  // this only drops jobs that explicitly conflict with the user's criteria.
-  // Runs after the LIMIT — ineligible rows shrink the page rather than
-  // backfilling, which is acceptable at this data scale.
-  const eligibleJobs = filterEligibleJobs(
-    rankedJobs.map((row) => ({ ...row, id: row.jobId })),
-    {
-      visaRequired: activeCriteria.visaRequired ?? undefined,
-      locations: activeCriteria.locations ?? undefined,
-      jobTypes: activeCriteria.jobTypes ?? undefined,
-    }
-  );
-
-  // Map to RankedJob type with fit bands and reasons
-  const results: RankedJob[] = eligibleJobs.map((row) => {
-    const fitScore = row.totalRequirements > 0 ? row.mappedRequirements / row.totalRequirements : 0;
-    const freshnessScore = calculateFreshnessScore(row.daysOld);
-    const compositeScore = 0.7 * fitScore + 0.3 * freshnessScore;
-
-    // Determine fit band per CONTEXT.md locked decision #4
-    const coveragePercent = fitScore * 100;
-    // For simplicity, assume medium confidence if we have matches
-    const avgConfidenceBand = row.mappedRequirements > 0 ? 'medium' : 'low';
-    const fitBand = determineFitBand(coveragePercent, avgConfidenceBand);
-
-    // Generate top 2-3 reasons
-    const fitReasons = generateFitReasons(
-      row.mappedRequirements,
-      row.totalRequirements,
-      fitScore,
-      freshnessScore
-    );
-
-    return {
-      jobId: row.jobId,
-      title: row.title,
-      company: row.company,
-      location: row.location,
-      url: row.url,
-      sourceUpdatedAt: row.sourceUpdatedAt,
-      totalRequirements: row.totalRequirements,
-      mappedRequirements: row.mappedRequirements,
-      fitScore,
-      freshnessScore,
-      compositeScore,
-      fitBand,
-      fitReasons,
-    };
+  return rankJobRows(rows, {
+    jobFunction: activeCriteria.jobFunction,
+    visaRequired: activeCriteria.visaRequired,
+    locations: activeCriteria.locations,
+    jobTypes: activeCriteria.jobTypes,
   });
-
-  return results;
 }
 
 /**

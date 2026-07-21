@@ -145,6 +145,11 @@ export default function CriteriaPage() {
         throw new Error(data.error || 'Failed to save criteria');
       }
 
+      // Kick off a poll for the new criteria right away (fire-and-forget —
+      // the server continues polling + matching after it responds). Without
+      // this, nothing happens until the next daily cron.
+      fetch('/api/jobs/poll', { method: 'POST' }).catch(() => {});
+
       setSuccess(true);
 
       // Clear form data to ensure fresh load on next visit
@@ -333,7 +338,8 @@ export default function CriteriaPage() {
             {success && (
               <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                 <p className="text-sm text-green-700">
-                  Criteria saved! Jobs will be polled within the hour.
+                  Criteria saved! Polling job boards now — fresh matches appear within a few
+                  minutes.
                 </p>
               </div>
             )}

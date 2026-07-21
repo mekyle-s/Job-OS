@@ -3,6 +3,7 @@ import { after } from 'next/server';
 import { isCronAuthorized } from '@/lib/auth/cron';
 import { getAllActiveCriteria } from '@/lib/db/queries/user-criteria';
 import { pollJobsForUser } from '@/lib/jobs/workers/job-poller';
+import { autoMatchTopJobs } from '@/lib/matching/auto-match';
 
 // Polls run in after() past the response; extraction is capped per poll
 export const maxDuration = 300;
@@ -32,12 +33,14 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // 3. Run polls sequentially after the response is sent
+  // 3. Run polls sequentially after the response is sent, auto-matching each
+  // user's top queue roles so coverage stays fresh without manual runs
   after(async () => {
     for (const criteria of allCriteria) {
       try {
         const result = await pollJobsForUser(criteria.userId, criteria.id);
         console.log(`[Cron Poll] Complete for user ${criteria.userId}:`, result);
+        await autoMatchTopJobs(criteria.userId);
       } catch (error) {
         console.error(`[Cron Poll] Failed for user ${criteria.userId}:`, error);
         // Continue to next user

@@ -6,6 +6,7 @@ import { createEvidenceSource } from '@/lib/db/queries/evidence';
 import { processResumeSource } from '@/lib/jobs/workers/resume-parser';
 import { extractTextFromPDF } from '@/lib/parsers/pdf-extractor';
 import { extractTextFromDOCX } from '@/lib/parsers/docx-extractor';
+import { autoMatchTopJobs } from '@/lib/matching/auto-match';
 
 // Parsing continues in after() past the response; allow time for LLM + embeddings
 export const maxDuration = 300;
@@ -81,12 +82,15 @@ export async function POST(request: NextRequest) {
       rawText,
     });
 
-    // 7. Parse after the response is sent (LLM extraction + embeddings).
+    // 7. Parse after the response is sent (LLM extraction + embeddings),
+    // then auto-match the top queue roles against the fresh evidence so the
+    // user sees fit coverage shortly after uploading — not 0/x everywhere.
     // after() keeps the serverless function alive past the response, so this
     // works on Vercel where background queue workers would be frozen.
     after(async () => {
       try {
         await processResumeSource(source.id, userId);
+        await autoMatchTopJobs(userId);
       } catch (error) {
         // processResumeSource already marked the source 'failed'
         console.error(`[Upload] Resume parsing failed for source ${source.id}:`, error);
